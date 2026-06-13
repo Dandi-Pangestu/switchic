@@ -1,0 +1,21 @@
+platform: claude
+workflows:
+  active:
+    - coding
+language: auto
+
+agents:
+  active:
+    - planner
+    - builder
+    - verifier
+
+skills:
+  active:
+    - codegen
+    - testgen
+    - lint
+
+rules:
+  active:
+    - global

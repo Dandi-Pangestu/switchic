@@ -1,0 +1,66 @@
+name: api
+description: REST API Design Standards & Rules (Based on Azure API Design Best Practices)
+content: |
+  ## 1. Resource-Oriented URL Structure
+  - **Nouns, Not Verbs:** Organize endpoints around resources (nouns) rather than actions (verbs). Avoid `/getCustomers` or `/deleteOrder`. Use `/customers` and `/orders`.
+  - **Hierarchical Paths:** Use a consistent collection/item/sub-collection hierarchy:
+    - List of customers: `GET /customers`
+    - Specific customer: `GET /customers/{id}`
+    - Orders of a customer: `GET /customers/{id}/orders`
+  - **Pluralization:** Use plural nouns uniformly for collections to avoid confusion (e.g., `/orders` instead of `/order`).
+
+  ## 2. Strict HTTP Method Semantics
+  Map your business operations cleanly to standard HTTP verbs, maintaining exact properties of idempotency and safety:
+  - **GET:** Retrieve a resource without side effects. Must be safe and idempotent. Never use `GET` to alter state.
+  - **POST:** Create a new resource or execute complex operations/controllers (e.g., `/orders/{id}/cancel`). Neither safe nor idempotent.
+  - **PUT:** Replace an entire existing resource, or create it if the client specifies the exact ID. Must be idempotent (repeating the request yields the same end state).
+  - **PATCH:** Perform a partial update to a resource. Pass a delta/patch document rather than the whole entity. Not inherently idempotent.
+  - **DELETE:** Remove a resource. Must be idempotent (subsequent requests should return 404 or 204, but the side effect on the server remains the same).
+
+  ## 3. Standardized HTTP Status Codes
+  Ensure responses use correct, unambiguous status codes to indicate the outcome of an operation:
+  - **Success (2xx):**
+    - `200 OK`: Successful synchronous operation returning a body.
+    - `201 Created`: Successful creation (via POST/PUT). Include a `Location` header pointing to the new resource.
+    - `202 Accepted`: Asynchronous request accepted but processing is pending. Include a `Location` header to poll for status.
+    - `204 No Content`: Successful execution with an intentionally empty response body (commonly used for DELETE or PUT updates).
+  - **Client Errors (4xx):**
+    - `400 Bad Request`: General client-side input validation failure.
+    - `401 Unauthorized`: Authentication missing or invalid.
+    - `403 Forbidden`: Authenticated, but lacking permission/RBAC to access the resource.
+    - `404 Not Found`: Resource does not exist.
+    - `409 Conflict`: Conflict with current state (e.g., trying to create a resource with a duplicate unique key).
+  - **Server Errors (5xx):**
+    - `500 Internal Server Error`: Unexpected server-side fault.
+    - `503 Service Unavailable`: Temporary overload or downstream outage.
+
+  ## 4. Querying, Filtering, & Pagination
+  - **Filtering & Sorting:** Do not create separate paths for filtering/sorting. Use query parameters instead (e.g., `/orders?status=pending&sort=createdAt`).
+  - **Pagination:** Large collections must never be returned in a single response. Use predictable pagination parameters:
+    - Offset-based: `/orders?limit=10&offset=20`
+    - Cursor-based (Preferred for highly dynamic lists): `/orders?pageSize=10&continuationToken=xyz`
+  - **Partial Responses:** Support a `fields` parameter to allow clients to request only a subset of properties to save bandwidth (e.g., `/users?fields=id,name`).
+
+  ## 5. Asynchronous Operations (Long-Running Tasks)
+  If an operation takes a long time to process (e.g., generating a massive report, provisioning a VM):
+  1. Immediately return status code **`202 Accepted`**.
+  2. Include a **`Location`** header in the response that points to a status endpoint (e.g., `/tasks/12345`).
+  3. Include a **`Retry-After`** header indicating how many seconds the client should wait before polling again.
+  4. The status endpoint should return a state object (e.g., `{ "status": "Processing", "progress": 45 }`) until complete, at which point it returns `200 OK` or links to the final created resource.
+
+  ## 6. Versioning Strategies
+  - **Explicit Versioning:** Always version breaking changes. Non-breaking changes (adding optional fields) do not warrant a new version.
+  - **Preferred Patterns:** Choose one approach and stick to it uniformly:
+    - *URI Versioning (Most Common):* `/v1/customers`
+    - *Custom Header Versioning:* `api-version: 1.0`
+    - *Media Type (Accept Header) Versioning:* `Accept: application/vnd.myapi.v1+json`
+
+  ## 7. Data Formats & Content Negotiation
+  - **JSON Standard:** Use JSON as the primary exchange format. Property names must use a consistent casing convention (prefer `camelCase`).
+  - **Content Negotiation:** Respect the client's `Accept` and `Content-Type` headers. Return a `406 Not Acceptable` if a client requests an unsupported content format.
+  - **HATEOAS (Optional but encouraged):** For high-maturity APIs, embed links (`_links` or `href`) in the response body to allow clients to discover next valid actions dynamically based on state.
+
+  ## 8. Resiliency & Security
+  - **Idempotency Keys:** Support an `Idempotency-Key` header for non-idempotent `POST` requests so clients can safely retry network timeouts without duplicating operations.
+  - **Rate Limiting:** Specify throttling thresholds. When limits are exceeded, return **`429 Too Many Requests`** along with a `Retry-After` header.
+  - **Error Payloads:** When returning 4xx or 5xx errors, provide a structured error object containing an internal machine-readable error code and a human-readable message, but *never* expose internal stack traces.

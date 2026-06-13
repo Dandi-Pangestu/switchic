@@ -1,0 +1,97 @@
+name: agent-import
+description: Convert an agent definition file from any AI coding platform (Claude Code, Cursor, GitHub Copilot) into a switchic-compatible YAML agent definition. Use when the user wants to migrate or reuse an existing agent inside switchic.
+
+claude:
+  argument-hint: "<agent-file-path> [output-path]"
+  allowed-tools: "Read Write Bash(find *)"
+
+prompt: |
+  # Agent Import
+
+  Convert an agent definition file from any AI coding platform into the switchic YAML format
+  so it can be registered as a bundled or project-local agent in switchic.
+
+  Each platform stores agents as markdown files with YAML frontmatter inside a named directory.
+  Platform field names differ (camelCase vs snake_case, different key names) — the mapping rules
+  are in `formats.md`.
+
+  ## Workflow
+
+  Follow this sequence strictly:
+
+  1. **Read the source file** — use the Read tool on the path the user provided.
+  2. **Detect the source format** using the rules in `formats.md`.
+  3. **Extract fields** according to the format's field mapping (see `formats.md`).
+  4. **Map to switchic schema** (see Target Schema below).
+  5. **Write the output** to the path the user specified, or default to `./agent.yaml` in the
+     current directory if no output path was given (see Output path resolution).
+  6. **Report** — after writing, print a one-paragraph summary: source platform detected, fields
+     mapped, output path, and any fields that had to be inferred, dropped, or left blank.
+
+  ## Target Schema
+
+  Every output file must be valid switchic YAML. Only include keys that have non-empty values.
+
+  ```yaml
+  name: kebab-case-name          # required; derive from filename stem if not in frontmatter
+  description: |                 # required; one sentence describing what the agent does and when to invoke it
+    ...
+  required_skills:               # optional; only when source has a skills list
+    - skill-name
+  instructions: |                # required; the full system prompt body
+    ...
+  claude:                        # only when source has claude-specific fields; omit the block entirely if empty
+    tools:                       # optional array; only when present in source
+      - Read
+      - Write
+    disallowed_tools:            # optional array; only when present in source
+      - WebFetch
+    model: sonnet                # optional; only when present in source
+    permission_mode: acceptEdits # optional; only when present in source
+    max_turns: 20                # optional; only when present in source
+    effort: high                 # optional; only when present in source
+    isolation: worktree          # optional; only when present in source
+    background: true             # optional; only when present in source
+    memory: project              # optional; only when present in source
+    color: blue                  # optional; only when present in source
+    initial_prompt: |            # optional; only when present in source
+      ...
+    mcp_servers:                 # optional; only when present in source
+      - server-name
+    hooks:                       # optional; only when present in source
+      PreToolUse:
+        - matcher: Bash
+          hooks:
+            - type: command
+              command: ./scripts/validate.sh
+  ```
+
+  Rules:
+  - `name` must be kebab-case. Prefer the frontmatter `name` field; fall back to the filename
+    stem. Strip spaces, `.md`, and platform-specific suffixes.
+  - `description` is a single sentence that names the agent and states when an AI should delegate
+    to it. If the source has no description, synthesize one from the instructions body — do not
+    leave it blank.
+  - `instructions` must be the raw body text with no frontmatter artifacts. See `formats.md` for
+    per-platform cleanup rules.
+  - `tools` and `disallowed_tools` in the Claude source are comma-separated strings — split them
+    into YAML arrays. See `formats.md` for the exact Claude-to-switchic field name mapping.
+  - `required_skills` maps from the Claude `skills` field (also comma-separated) — split into
+    an array.
+  - Do not add fields that are absent from the source unless the field is required.
+  - Do not truncate the instructions. Preserve all original content verbatim.
+  - If no claude-specific fields are present after mapping, omit the `claude:` block entirely.
+
+  ## Output path resolution
+
+  1. If the user provided an explicit output path as the second argument, use it.
+  2. If the user gave no output path but gave an input path, write to the same directory as the
+     input file, naming the output `agent.yaml`.
+  3. If neither is given, write `./agent.yaml` in the current working directory.
+
+  Warn the user before overwriting an existing file at the target path. If overwriting, ask for
+  confirmation unless the user has already said "yes" or "overwrite".
+
+  ## Additional resources
+
+  - Source format detection and field mapping: [formats.md](formats.md)

@@ -1,0 +1,20 @@
+package platform
+
+import "github.com/Dandi-Pangestu/switchic/internal/util"
+
+// Get returns the adapter for the named platform. The MVP ships only the
+// Claude adapter; unknown names produce ErrUnknownPlatform so callers can
+// surface a helpful message.
+func Get(name string) (Adapter, error) {
+	switch name {
+	case "claude":
+		return Claude{}, nil
+	default:
+		return nil, util.Wrap(util.ErrUnknownPlatform, "platform %q", name)
+	}
+}
+
+// Available returns the list of platform names this build supports.
+func Available() []string {
+	return []string{"claude"}
+}

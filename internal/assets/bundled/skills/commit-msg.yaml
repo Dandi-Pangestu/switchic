@@ -1,0 +1,11 @@
+name: commit-msg
+description: Generate a conventional commit message from staged changes
+prompt: |
+  Read the staged diff (git diff --cached).
+  Write a conventional commit message:
+    type(scope): summary ≤72 chars
+    blank line
+    optional body explaining WHY (not what)
+
+  Types: feat|fix|docs|refactor|test|chore|perf
+  Output only the message — no commentary.

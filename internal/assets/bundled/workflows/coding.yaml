@@ -1,0 +1,22 @@
+name: coding
+description: |
+  Drives a ticket from Jira to merged code in four phases:
+  1. Context gathering — fetches Jira requirements and PR details in parallel, then bootstraps a git worktree and feature branch.
+  2. Planning — a senior-architect agent produces an implementation plan saved to generated-docs/<JIRA_KEY>/implementation-plan.md; a human approves before any code is written.
+  3. Implementation loop — code-implementer executes the plan (code + tests), code-reviewer checks correctness, quality, security, and acceptance criteria; the loop repeats until the review passes.
+  4. Session lifecycle — session-manager tracks parallel worktrees via sessions/registry.json and cleans up on completion.
+  The coding-orchestrator drives all sub-agents; ordering and retry logic are defined in its instructions.
+agents:
+  - coding-orchestrator
+  - jira-requirements-fetcher
+  - pr-details-fetcher
+  - session-bootstraper
+  - implementation-plan-writer
+  - code-implementer
+  - code-reviewer
+  - session-manager
+skills:
+  - code-review-documentation
+  - implementation-plan
+  - worktree-cleanup
+  - worktree-setup

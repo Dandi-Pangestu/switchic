@@ -1,0 +1,22 @@
+# Example project config — copy to .switchic/config.yaml inside a repo and
+# edit. The file is normally created by `switchic init`.
+platform: claude
+workflow: coding
+language: go
+
+agents:
+  active:
+    - planner
+    - builder
+    - verifier
+
+skills:
+  active:
+    - codegen
+    - testgen
+    - lint
+
+rules:
+  active:
+    - global
+    - golang

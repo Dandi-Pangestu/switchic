@@ -1,0 +1,50 @@
+name: typescript
+description: TypeScript Coding Standards & Rules (Based on Google TS Style Guide)
+content: |
+  ## 1. Source File Structure & Formatting
+  - **Encoding & Whitespace:** Source files must use UTF-8. Use only the ASCII horizontal space character (0x20) for indentation (default to 2 spaces). Do not use hard tabs.
+  - **File Order:** Structure files in exactly this order: Copyright/License (if needed), `@fileoverview` JSDoc (if needed), Imports, and then the File Implementation. Separate each section with exactly one blank line.
+  - **Semicolons:** Always use explicit semicolons at the end of statements; do not rely on Automatic Semicolon Insertion (ASI).
+
+  ## 2. Naming Conventions
+  - **Identifiers:** Use only ASCII letters, digits, and underscores. 
+  - **Formatting Rules:**
+    - `PascalCase` for Class, Interface, Type Alias, Decorator, and Enum names.
+    - `camelCase` for variables, functions, properties, method names, and parameter names.
+    - `CONSTANT_CASE` (UPPER_CASE_WITH_UNDERSCORES) only for constants that are strictly immutable/frozen or shouldn't be changed.
+  - **No Type Decorations:** Do not decorate names with type information (e.g., do *not* prefix interfaces with `I`, like `IMyInterface`, and do *not* use hungarian notation).
+  - **Private Fields:** Do *not* use a leading or trailing underscore (`_`) for private or protected members. Use standard access modifiers.
+
+  ## 3. Imports & Modules
+  - **Named vs. Namespace:** Prefer named imports (`import {Foo} from './foo'`). Avoid namespace imports (`import * as foo`) unless importing massive external libraries (like Angular or React) where it makes sense.
+  - **Import Types:** Use `import type { TypeName }` explicitly if you are only importing types to optimize build bundles and clarity.
+  - **Paths:** Use relative paths (`./foo` or `../parent/foo`) for files within the same logical project instead of absolute paths, keeping the nesting levels shallow (`../../../` should be limited).
+  - **Default Exports:** Do not use `export default`. Always use named exports to ensure naming consistency across the codebase when consumers import symbols.
+
+  ## 4. Language & Type System Rules
+  - **Explicit vs Implicit Types:** Allow type inference where the type is entirely obvious (e.g., `const x = 'hello'`), but explicitly provide types for function parameters, return values, and complex initializations.
+  - **Avoid 'any':** Avoid using `any`. If a type is truly unknown, always prefer the `unknown` type and use type narrowing before performing operations.
+  - **Type Assertions:** Use the `as Type` syntax for type assertions (e.g., `x as TargetType`). Do *not* use the angle-bracket syntax (`<TargetType>x`) as it conflicts with JSX/TSX.
+  - **Type Conversions:** Use global constructor objects for type conversions (e.g., `String(foo)` or `Number(foo)`) rather than shorthand tricks like `'' + foo` or `+foo`.
+  - **Arrays:** Use the `Type[]` shorthand syntax for array types instead of the generic `Array<Type>` syntax (e.g., `string[]` instead of `Array<string>`).
+
+  ## 5. Classes & Objects
+  - **Variables:** Always use `const` or `let` to declare variables. Never use `var`. Prefer `const` by default.
+  - **Class Visibility:** Explicitly mark class members with `public`, `protected`, or `private`. (Note: Do *not* use private identifiers like `#field`, stick to the `private` keyword).
+  - **Readonly:** Mark fields as `readonly` if they are not reassigned outside of the constructor.
+  - **Parameter Properties:** Use parameter properties in constructors sparingly and only when it simplifies field initialization (e.g., `constructor(private readonly name: string) {}`).
+  - **Object Literals:** Use the `...` spread operator for shallow-copying or concatenating iterables and objects rather than `Object.assign`.
+
+  ## 6. Functions & Control Flow
+  - **Arrow Functions:** Prefer arrow functions (`() => {}`) for local callbacks, expressions, and when preserving the lexical scope of `this`.
+  - **Conditionals:** Always wrap conditional blocks with curly braces `{}` even if they are single-line statements.
+  - **Switch Statements:** Always include a `default` case in switch statements, or ensure it handles all union elements exhaustively.
+
+  ## 7. Comments & Documentation
+  - **JSDoc Style:** Use `/** JSDoc */` comments for all exported APIs, classes, interfaces, and public methods that the user of the code should read.
+  - **Implementation Comments:** Use `//` line comments for inline, local implementation details or hacks that concern the engineer working *inside* the function.
+  - **Redundancy:** Do not write comments that merely restate type information (e.g., avoid `@param foo` if it provides no extra context beyond its TypeScript type). Only document the "why" and constraints.
+claude:
+  paths:
+    - "**/*.ts"
+    - "**/*.tsx"

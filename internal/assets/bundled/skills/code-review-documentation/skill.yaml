@@ -1,0 +1,46 @@
+name: code-review-documentation
+description: |
+  Guide for producing structured code review summaries and documentation; use when reviewing
+  implementation code and documenting findings for Jira tickets, PRs, or similar requirements.
+prompt: |
+  To produce a high-quality code review summary:
+
+  1. Use clear sections and structure to organize findings (e.g., Review Status, Acceptance Criteria Checklist, Code Quality Issues, Test Coverage, Scope Assessment, Flagged Issues, Recommendations).
+  2. Provide a clear approval status (Approved / Needs Revision).
+  3. Check each acceptance criterion from the Jira ticket and mark as ✓ (met) or ✗ (not met).
+  4. Identify and list any code quality issues, missing test coverage, or architectural concerns.
+  5. Assess whether changes are in-scope or out-of-scope relative to the Jira requirements.
+  6. Provide specific, actionable feedback for any flagged issues.
+  7. Format for easy consumption by engineers and stakeholders.
+
+  Example structure:
+
+  ## Review Status
+  **Status:** [Approved / Needs Revision]
+
+  ## Acceptance Criteria Checklist
+  - ✓ Criterion 1
+  - ✓ Criterion 2
+  - ✗ Criterion 3 (Reason)
+
+  ## Code Quality
+  - Issue 1: Description
+  - Issue 2: Description
+
+  ## Test Coverage
+  - All RSpec tests passing: [Yes/No]
+  - New tests added: [Yes/No]
+  - Coverage: [Details]
+
+  ## Scope Assessment
+  - In-scope: [List of changes]
+  - Out-of-scope: [If any, list them]
+
+  ## Flagged Issues & Feedback
+  - Issue 1: Description and recommendation
+  - Issue 2: Description and recommendation
+
+  ## Recommendations
+  - [Optional recommendations for future improvements]
+
+  Use this skill to document code reviews comprehensively. Output must be structured, professional, and actionable for implementers and stakeholders.

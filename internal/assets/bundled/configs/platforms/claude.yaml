@@ -1,0 +1,13 @@
+name: claude
+display_name: Claude Code
+description: Anthropic Claude Code CLI / Claude.ai code assistant
+output:
+  primary_file: CLAUDE.md
+  agents_dir: .claude/agents
+  workflows_dir: .claude/workflows
+  rules_dir: .claude/rules
+context:
+  include_agents: true
+  include_skills: true
+  include_rules: true
+  include_workspace_summary: true

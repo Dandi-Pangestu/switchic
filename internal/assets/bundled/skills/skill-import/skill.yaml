@@ -1,0 +1,76 @@
+name: skill-import
+description: Convert a SKILL.md from any AI coding tool (Claude Code, Cursor, GitHub Copilot, Windsurf) into a switchic-compatible YAML skill definition. Use when the user wants to migrate or reuse an existing skill inside switchic.
+
+claude:
+  argument-hint: "<skill-file-path> [output-path]"
+  allowed-tools: "Read Write Bash(find *)"
+
+prompt: |
+  # Skill Import
+
+  Convert a SKILL.md from any AI coding tool into the switchic YAML format so it can be
+  registered as a bundled or project-local skill in switchic.
+
+  All major AI coding tools follow the Agent Skills open standard (https://agentskills.io):
+  skills are `SKILL.md` files with YAML frontmatter stored inside a named subdirectory.
+  The platforms share the same core fields; differences are minor (see `formats.md`).
+
+  ## Workflow
+
+  Follow this sequence strictly:
+
+  1. **Read the source file** — use the Read tool on the path the user provided.
+  2. **Detect the source format** using the rules in `formats.md`.
+  3. **Extract fields** according to the format's field mapping (see `formats.md`).
+  4. **Map to switchic schema** (see Target Schema below).
+  5. **Write the output** to the path the user specified, or default to `./skill.yaml` in the
+     current directory if no output path was given.
+  6. **Report** — after writing, print a one-paragraph summary: source platform detected, fields
+     mapped, output path, and any fields that had to be inferred, dropped, or left blank.
+
+  ## Target Schema
+
+  Every output file must be valid switchic YAML. Only include keys that have non-empty values.
+
+  ```yaml
+  name: kebab-case-name          # required; derive from directory or filename stem if not in frontmatter
+  description: |                 # required; one sentence describing what the skill does and when to invoke it
+    ...
+  argument-hint: "[args]"        # optional; carry over only when present in source
+  disable-model-invocation: true # optional; only set when present in source
+  allowed-tools: "Tool1 Tool2"   # optional; carry over only when present in source
+  prompt: |                      # required; the full skill instruction body
+    ...
+  ```
+
+  Rules:
+  - `name` must be kebab-case. Prefer the frontmatter `name` field; fall back to the skill
+    directory name, then the filename stem. Strip spaces and platform-specific suffixes
+    (`.md`, `.yaml`, `-skill`).
+  - `description` is a single sentence that names the skill and states when an AI should invoke it.
+    If the source has no description, synthesize one from the prompt body — do not leave it blank.
+  - `prompt` must be the raw instruction text with no frontmatter artifacts or platform-specific
+    decorators. See `formats.md` for per-platform cleanup rules.
+  - Do not add fields that are absent from the source unless the field is required.
+  - Do not truncate the prompt. Preserve all original instructions verbatim.
+
+  ## Output path resolution
+
+  1. If the user provided an explicit output path as the second argument, use it.
+  2. If the user gave no output path but gave an input path, write to the same directory as the
+     input file, naming the output `skill.yaml`.
+  3. If neither is given, write `./skill.yaml` in the current working directory.
+
+  Warn the user before overwriting an existing file at the target path. If overwriting, ask for
+  confirmation unless the user has already said "yes" or "overwrite".
+
+  ## Multi-skill files
+
+  If the source file contains multiple distinct skill blocks, ask the user:
+  "This file contains multiple skill blocks. Convert to one combined skill, or split into
+  separate YAML files (one per block)?"
+  Default to combined if the user does not respond.
+
+  ## Additional resources
+
+  - Source format detection and field mapping: [formats.md](formats.md)

@@ -1,0 +1,381 @@
+package platform
+
+import (
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/Dandi-Pangestu/switchic/internal/agent"
+	"github.com/Dandi-Pangestu/switchic/internal/rules"
+	"github.com/Dandi-Pangestu/switchic/internal/util"
+)
+
+// Claude is the platform adapter that targets Anthropic's Claude Code CLI /
+// claude.ai code assistant. The output is deterministic: same inputs always
+// produce the same files.
+type Claude struct{}
+
+// Name implements Adapter.
+func (Claude) Name() string { return "claude" }
+
+// Generate writes:
+//   - CLAUDE.md  — the top-level context file Claude Code reads on launch
+//   - .claude/agents/<name>.md   — one per active agent
+//   - .claude/rules/<name>.md    — one per active rule
+//
+// In workspace mode it adds a "Workspace" section to CLAUDE.md describing
+// each repo, its role, and any notes. Returns the list of written file paths
+// (for status messages and golden tests).
+func (Claude) Generate(ctx Context) ([]string, error) {
+	var written []string
+
+	mainPath := filepath.Join(ctx.Root, "CLAUDE.md")
+	mainContent := buildMainContext(ctx)
+	if err := util.WriteFile(mainPath, []byte(mainContent)); err != nil {
+		return nil, util.Wrap(err, "write %s", mainPath)
+	}
+	written = append(written, mainPath)
+
+	agentsDir := filepath.Join(ctx.Root, ".claude", "agents")
+	for _, a := range ctx.Agents {
+		p := filepath.Join(agentsDir, a.Name+".md")
+		content, err := buildAgentFile(a)
+		if err != nil {
+			return nil, util.Wrap(err, "build agent %s", a.Name)
+		}
+		if err := util.WriteFile(p, content); err != nil {
+			return nil, util.Wrap(err, "write %s", p)
+		}
+		written = append(written, p)
+	}
+
+	rulesDir := filepath.Join(ctx.Root, ".claude", "rules")
+	for _, r := range ctx.Rules {
+		p := filepath.Join(rulesDir, r.Dir, r.Name+".md")
+		content, err := buildRuleFile(r)
+		if err != nil {
+			return nil, util.Wrap(err, "build rule %s", r.Name)
+		}
+		if err := util.WriteFile(p, content); err != nil {
+			return nil, util.Wrap(err, "write %s", p)
+		}
+		written = append(written, p)
+	}
+
+	skillsDir := filepath.Join(ctx.Root, ".claude", "skills")
+	for _, s := range ctx.Skills {
+		p := filepath.Join(skillsDir, s.Name, "SKILL.md")
+		var b strings.Builder
+		b.WriteString("---\n")
+		fmt.Fprintf(&b, "name: %s\n", s.Name)
+		if s.Description != "" {
+			fmt.Fprintf(&b, "description: %s\n", s.Description)
+		}
+		if c := s.Claude; c != nil {
+			if c.WhenToUse != "" {
+				fmt.Fprintf(&b, "when_to_use: %s\n", c.WhenToUse)
+			}
+			if c.DisableModelInvocation {
+				b.WriteString("disable-model-invocation: true\n")
+			}
+			if c.UserInvocable != nil && !*c.UserInvocable {
+				b.WriteString("user-invocable: false\n")
+			}
+			if c.ArgumentHint != "" {
+				fmt.Fprintf(&b, "argument-hint: %s\n", c.ArgumentHint)
+			}
+			if c.Arguments != nil {
+				raw, err := yaml.Marshal(map[string]interface{}{"arguments": c.Arguments})
+				if err != nil {
+					return nil, util.Wrap(err, "marshal skill arguments %s", s.Name)
+				}
+				b.Write(raw)
+			}
+			if c.AllowedTools != "" {
+				fmt.Fprintf(&b, "allowed-tools: %s\n", c.AllowedTools)
+			}
+			if c.DisallowedTools != "" {
+				fmt.Fprintf(&b, "disallowed-tools: %s\n", c.DisallowedTools)
+			}
+			if c.Model != "" {
+				fmt.Fprintf(&b, "model: %s\n", c.Model)
+			}
+			if c.Effort != "" {
+				fmt.Fprintf(&b, "effort: %s\n", c.Effort)
+			}
+			if c.Context != "" {
+				fmt.Fprintf(&b, "context: %s\n", c.Context)
+			}
+			if c.Agent != "" {
+				fmt.Fprintf(&b, "agent: %s\n", c.Agent)
+			}
+			if c.Shell != "" {
+				fmt.Fprintf(&b, "shell: %s\n", c.Shell)
+			}
+			if c.Paths != nil {
+				raw, err := yaml.Marshal(map[string]interface{}{"paths": c.Paths})
+				if err != nil {
+					return nil, util.Wrap(err, "marshal skill paths %s", s.Name)
+				}
+				b.Write(raw)
+			}
+			if c.Hooks != nil {
+				raw, err := yaml.Marshal(map[string]interface{}{"hooks": c.Hooks})
+				if err != nil {
+					return nil, util.Wrap(err, "marshal skill hooks %s", s.Name)
+				}
+				b.Write(raw)
+			}
+		}
+		b.WriteString("---\n\n")
+		if s.Prompt != "" {
+			b.WriteString(s.Prompt)
+			b.WriteString("\n")
+		}
+		if err := util.WriteFile(p, []byte(b.String())); err != nil {
+			return nil, util.Wrap(err, "write %s", p)
+		}
+		written = append(written, p)
+
+		for _, f := range s.Files {
+			fp := filepath.Join(skillsDir, s.Name, f.RelPath)
+			if err := util.WriteFile(fp, f.Content); err != nil {
+				return nil, util.Wrap(err, "write %s", fp)
+			}
+			written = append(written, fp)
+		}
+	}
+
+	return written, nil
+}
+
+func buildMainContext(ctx Context) string {
+	var b strings.Builder
+
+	// ── Header: project / workspace identity ─────────────────────────────────
+	if ctx.IsWorkspace {
+		fmt.Fprintf(&b, "# %s\n\n", ctx.Workspace.Name)
+		if ctx.Workspace.Notes != "" {
+			fmt.Fprintf(&b, "%s\n\n", ctx.Workspace.Notes)
+		}
+		b.WriteString("## Repos\n\n")
+		for _, r := range ctx.Workspace.Repos {
+			role := r.Role
+			if role == "" {
+				role = "repo"
+			}
+			fmt.Fprintf(&b, "- **%s** (`%s`) — %s", r.Name, r.Path, role)
+			if r.Notes != "" {
+				fmt.Fprintf(&b, ": %s", r.Notes)
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	} else {
+		name := ctx.Project.Name
+		if name == "" {
+			name = filepath.Base(ctx.Root)
+		}
+		fmt.Fprintf(&b, "# %s\n\n", name)
+
+		if ctx.Project.Description != "" {
+			fmt.Fprintf(&b, "%s\n\n", ctx.Project.Description)
+		}
+
+		if len(ctx.Project.Stack) > 0 {
+			fmt.Fprintf(&b, "**Stack:** %s\n\n", strings.Join(ctx.Project.Stack, " · "))
+		} else if ctx.Project.Language != "" && ctx.Project.Language != "auto" {
+			fmt.Fprintf(&b, "**Language:** %s\n\n", ctx.Project.Language)
+		}
+	}
+
+	// ── Commands ──────────────────────────────────────────────────────────────
+	if len(ctx.Project.Commands) > 0 {
+		b.WriteString("## Commands\n\n")
+		b.WriteString("| Label | Command | Description |\n")
+		b.WriteString("|-------|---------|-------------|\n")
+		keys := make([]string, 0, len(ctx.Project.Commands))
+		for k := range ctx.Project.Commands {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			cmd := ctx.Project.Commands[k]
+			fmt.Fprintf(&b, "| `%s` | `%s` | %s |\n", k, cmd.Run, cmd.Description)
+		}
+		b.WriteString("\n")
+	}
+
+	// ── Directory structure ───────────────────────────────────────────────────
+	if len(ctx.Project.Structure) > 0 {
+		b.WriteString("## Structure\n\n")
+		keys := make([]string, 0, len(ctx.Project.Structure))
+		for k := range ctx.Project.Structure {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Fprintf(&b, "- `%s` — %s\n", k, ctx.Project.Structure[k])
+		}
+		b.WriteString("\n")
+	}
+
+	// ── Conventions ───────────────────────────────────────────────────────────
+	if len(ctx.Project.Conventions) > 0 {
+		b.WriteString("## Conventions\n\n")
+		b.WriteString("> Non-default patterns only — skip anything enforced by a linter or standard for the language.\n\n")
+		for _, c := range ctx.Project.Conventions {
+			fmt.Fprintf(&b, "- %s\n", c)
+		}
+		b.WriteString("\n")
+	}
+
+	// ── Do / Don't ───────────────────────────────────────────────────────────
+	if len(ctx.Project.Dos) > 0 || len(ctx.Project.Donts) > 0 {
+		b.WriteString("## Do / Don't\n\n")
+		if len(ctx.Project.Dos) > 0 {
+			b.WriteString("### Do\n\n")
+			for _, item := range ctx.Project.Dos {
+				fmt.Fprintf(&b, "- %s\n", item)
+			}
+			b.WriteString("\n")
+		}
+		if len(ctx.Project.Donts) > 0 {
+			b.WriteString("### Don't\n\n")
+			for _, item := range ctx.Project.Donts {
+				fmt.Fprintf(&b, "- %s\n", item)
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	// ── Reference docs ────────────────────────────────────────────────────────
+	if len(ctx.Project.Docs) > 0 {
+		b.WriteString("## References\n\n")
+		for _, doc := range ctx.Project.Docs {
+			if doc.When != "" {
+				fmt.Fprintf(&b, "- When %s, read `@%s`.\n", doc.When, doc.Path)
+			} else {
+				fmt.Fprintf(&b, "- @%s\n", doc.Path)
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	// ── Footer ────────────────────────────────────────────────────────────────
+	b.WriteString("---\n\n")
+	b.WriteString("_Generated by switchic — re-run `switchic switch claude` to update._  \n")
+	b.WriteString("_Coding rules auto-loaded from `.claude/rules/`. Agent definitions in `.claude/agents/`. Skills in `.claude/skills/`._\n")
+
+	return b.String()
+}
+
+// buildRuleFile renders a single rules.Definition into the .md content that
+// Claude Code expects in .claude/rules/<name>.md.
+// When claude.paths is set, YAML frontmatter is emitted so Claude scopes the
+// rule to files matching those glob patterns.
+func buildRuleFile(r rules.Definition) ([]byte, error) {
+	var b strings.Builder
+	if c := r.Claude; c != nil && len(c.Paths) > 0 {
+		raw, err := yaml.Marshal(map[string]interface{}{"paths": c.Paths})
+		if err != nil {
+			return nil, fmt.Errorf("marshal rule paths %s: %w", r.Name, err)
+		}
+		b.WriteString("---\n")
+		b.Write(raw)
+		b.WriteString("---\n\n")
+	}
+	fmt.Fprintf(&b, "# Rules: %s\n\n", r.Name)
+	if r.Description != "" {
+		fmt.Fprintf(&b, "%s\n\n", r.Description)
+	}
+	if r.Content != "" {
+		b.WriteString(r.Content)
+		if !strings.HasSuffix(r.Content, "\n") {
+			b.WriteString("\n")
+		}
+	}
+	return []byte(b.String()), nil
+}
+
+// buildAgentFile renders a single agent.Definition into the .md content that
+// Claude Code expects in .claude/agents/<name>.md.
+// Our snake_case YAML fields are mapped to Claude's camelCase frontmatter keys.
+func buildAgentFile(a agent.Definition) ([]byte, error) {
+	var b strings.Builder
+	b.WriteString("---\n")
+	fmt.Fprintf(&b, "name: %s\n", a.Name)
+	fmt.Fprintf(&b, "description: %s\n", a.Description)
+
+	if c := a.Claude; c != nil {
+		if len(c.Tools) > 0 {
+			fmt.Fprintf(&b, "tools: %s\n", strings.Join(c.Tools, ", "))
+		}
+		if len(c.DisallowedTools) > 0 {
+			fmt.Fprintf(&b, "disallowedTools: %s\n", strings.Join(c.DisallowedTools, ", "))
+		}
+		if c.Model != "" {
+			fmt.Fprintf(&b, "model: %s\n", c.Model)
+		}
+		if c.PermissionMode != "" {
+			fmt.Fprintf(&b, "permissionMode: %s\n", c.PermissionMode)
+		}
+		if c.MaxTurns > 0 {
+			fmt.Fprintf(&b, "maxTurns: %d\n", c.MaxTurns)
+		}
+		if len(a.RequiredSkills) > 0 {
+			fmt.Fprintf(&b, "skills: %s\n", strings.Join(a.RequiredSkills, ", "))
+		}
+		if c.Memory != "" {
+			fmt.Fprintf(&b, "memory: %s\n", c.Memory)
+		}
+		if c.Background {
+			b.WriteString("background: true\n")
+		}
+		if c.Effort != "" {
+			fmt.Fprintf(&b, "effort: %s\n", c.Effort)
+		}
+		if c.Isolation != "" {
+			fmt.Fprintf(&b, "isolation: %s\n", c.Isolation)
+		}
+		if c.Color != "" {
+			fmt.Fprintf(&b, "color: %s\n", c.Color)
+		}
+		if c.InitialPrompt != "" {
+			b.WriteString("initialPrompt: |\n")
+			for _, line := range strings.Split(strings.TrimRight(c.InitialPrompt, "\n"), "\n") {
+				fmt.Fprintf(&b, "  %s\n", line)
+			}
+		}
+		if c.McpServers != nil {
+			raw, err := yaml.Marshal(map[string]interface{}{"mcpServers": c.McpServers})
+			if err != nil {
+				return nil, fmt.Errorf("marshal mcpServers: %w", err)
+			}
+			b.Write(raw)
+		}
+		if c.Hooks != nil {
+			raw, err := yaml.Marshal(map[string]interface{}{"hooks": c.Hooks})
+			if err != nil {
+				return nil, fmt.Errorf("marshal hooks: %w", err)
+			}
+			b.Write(raw)
+		}
+	} else if len(a.RequiredSkills) > 0 {
+		fmt.Fprintf(&b, "skills: %s\n", strings.Join(a.RequiredSkills, ", "))
+	}
+
+	b.WriteString("---\n")
+	if a.Instructions != "" {
+		b.WriteString("\n")
+		b.WriteString(a.Instructions)
+		if !strings.HasSuffix(a.Instructions, "\n") {
+			b.WriteString("\n")
+		}
+	}
+	return []byte(b.String()), nil
+}
+

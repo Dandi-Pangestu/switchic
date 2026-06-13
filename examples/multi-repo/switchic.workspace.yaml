@@ -1,0 +1,33 @@
+# Example workspace manifest — copy to switchic.workspace.yaml in the parent
+# directory of your repos, then run `switchic switch claude` from there.
+name: billing-workspace
+platform: claude
+workflow: coding
+
+repos:
+  - name: billing-api
+    path: ../billing-api
+    role: backend
+    notes: REST API, owns user accounts and invoicing
+  - name: billing-web
+    path: ../billing-web
+    role: frontend
+    notes: Customer-facing dashboard (React)
+  - name: billing-contracts
+    path: ../billing-contracts
+    role: contracts
+    notes: Shared OpenAPI specs + generated client SDKs
+
+agents:
+  active:
+    - planner
+    - builder
+
+skills:
+  active:
+    - codegen
+    - summarize
+
+rules:
+  active:
+    - global

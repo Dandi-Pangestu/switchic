@@ -1,0 +1,149 @@
+# Example agent definition — use this file as a reference when creating new agents.
+# All available fields are shown below with descriptions and valid values.
+
+# ─── Core fields (cross-platform) ────────────────────────────────────────────
+
+# name [required]
+# Unique identifier for this agent. Use lowercase letters and hyphens.
+name: example
+
+# description [required]
+# Tells the AI when to delegate work to this agent.
+# Write 1–2 specific sentences — this is what Claude reads to decide whether to invoke the agent.
+description: >-
+  Example agent that demonstrates every available field. Use as a starting point
+  or reference when defining new agents in switchic.
+
+# required_skills
+# Skills that are automatically imported whenever this agent is active.
+# These are unioned with the active skills list from your config —
+# you do not need to list them separately.
+required_skills:
+  - commit-msg
+
+# instructions
+# The system prompt for this agent. On Claude, this becomes the agent's entire
+# system prompt — it does not inherit the parent session's prompt.
+instructions: |
+  You are an example agent. Replace this prompt with your own instructions.
+
+  When invoked:
+  1. Review agent memory for relevant context.
+  2. Complete the assigned task using the available tools.
+  3. Update agent memory with new insights discovered during the task.
+
+# ─── Platform-specific fields ─────────────────────────────────────────────────
+# Each platform has its own block. The generator reads only the block that
+# matches the active platform and ignores the rest.
+
+# claude:
+# Fields under this key are emitted into .claude/agents/<name>.md frontmatter
+# when running `switchic switch claude`.
+claude:
+  # tools
+  # Allowlist of tools this agent can use.
+  # If omitted, the agent inherits all tools from the parent session.
+  # Common values: Read, Write, Edit, Bash, Grep, Glob, WebFetch, Agent
+  tools:
+    - Read
+    - Bash
+    - Edit
+    - Write
+
+  # disallowed_tools
+  # Tools to remove from the inherited or specified tool set.
+  # Applied before `tools` is resolved — a tool listed in both is removed.
+  disallowed_tools:
+    - WebFetch
+
+  # model
+  # Which model to use for this agent.
+  # Options: sonnet | opus | haiku | fable | inherit | <full-model-id>
+  # Default: inherit (same model as the parent session).
+  model: sonnet
+
+  # permission_mode
+  # How permission prompts are handled inside this agent.
+  # Options:
+  #   default           — standard prompts (same as the main session)
+  #   acceptEdits       — auto-accept file edits in the working directory
+  #   auto              — background classifier decides; no interactive prompts
+  #   dontAsk           — auto-deny anything not explicitly allowed
+  #   bypassPermissions — skip all permission checks (use with caution)
+  #   plan              — read-only exploration mode
+  permission_mode: acceptEdits
+
+  # max_turns
+  # Hard cap on agentic turns. The agent stops after this many turns.
+  # Omit for no cap.
+  max_turns: 20
+
+  # effort
+  # Thinking effort level. Overrides the session default for this agent.
+  # Options: low | medium | high | xhigh | max
+  # Available levels depend on the chosen model.
+  effort: high
+
+  # isolation
+  # Set to "worktree" to run the agent in a temporary git worktree.
+  # The worktree branches from the default branch and is auto-cleaned if unchanged.
+  # Omit to share the working directory with the parent session.
+  isolation: worktree
+
+  # background
+  # true means Claude always runs this agent as a background task.
+  # Background agents auto-deny prompts instead of blocking for user input.
+  # Default: false — omit this field or set to false to keep the default.
+  background: true
+
+  # memory
+  # Gives the agent a persistent directory that survives across conversations.
+  # Options:
+  #   user    — ~/.claude/agent-memory/<name>/        (all projects)
+  #   project — .claude/agent-memory/<name>/          (shareable via git)
+  #   local   — .claude/agent-memory-local/<name>/    (not committed)
+  memory: project
+
+  # color
+  # Display color for this agent in the task list and transcript.
+  # Options: red | blue | green | yellow | purple | orange | pink | cyan
+  color: blue
+
+  # initial_prompt
+  # Auto-submitted as the first user turn when running via `claude --agent <name>`
+  # or the `agent` setting. Commands and skills are processed. Prepended to any
+  # user-provided prompt.
+  initial_prompt: |
+    Check your agent memory for relevant context before starting.
+
+  # mcp_servers
+  # MCP servers scoped exclusively to this agent.
+  # Each entry is either:
+  #   - a string: references an already-configured server by name
+  #   - a map:    inline server definition (same schema as .mcp.json entries)
+  # Supported server types: stdio | http | sse | ws
+  mcp_servers:
+    - github
+    - my-custom-server:
+        type: stdio
+        command: npx
+        args:
+          - -y
+          - my-mcp-package
+
+  # hooks
+  # Lifecycle hooks scoped to this agent only.
+  # Supported events: PreToolUse | PostToolUse | Stop
+  # Each rule has an optional `matcher` (tool name or regex) and hook commands.
+  # A PreToolUse hook that exits with code 2 blocks the tool call.
+  hooks:
+    PreToolUse:
+      - matcher: Bash
+        hooks:
+          - type: command
+            command: ./scripts/validate-command.sh
+    PostToolUse:
+      - matcher: "Edit|Write"
+        hooks:
+          - type: command
+            command: ./scripts/run-linter.sh

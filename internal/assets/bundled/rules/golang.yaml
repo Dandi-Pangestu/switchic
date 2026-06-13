@@ -1,0 +1,53 @@
+name: golang
+description: Go Coding Standards & Rules (Based on Effective Go)
+content: |
+  ## 1. Formatting & Naming
+  * **Formatting:** Always assume the code will be processed by `gofmt`. Write code that aligns with standard `gofmt` styling.
+  * **Package Names:** Use short, concise, lowercase, single-word names (e.g., `time`, `bytes`, `os`). Avoid `under_scores` or `mixedCaps`. The package name is the base name of its source directory.
+  * **Variable & Function Names:** Use `MixedCaps` or `mixedCaps` (camelCase) rather than underscores for multi-word names.
+  * **Getters & Setters:** * Do NOT put `Get` in the getter's name. If you have a field called `owner`, the getter should be `Owner()` (not `GetOwner()`).
+    * The setter function should be named `SetOwner()`.
+  * **Interfaces:** One-method interfaces should generally be named by the method name plus an `-er` suffix or similar modification (e.g., `Reader`, `Writer`, `Formatter`, `CloseNotifier`).
+
+  ## 2. Comments & Documentation
+  * **Doc Comments:** Every exported (capitalized) name in a program should have a doc comment.
+  * **Format:** A doc comment must be a complete sentence that begins with the name of the item it describes (e.g., `// Request represents a request to run a command.`).
+
+  ## 3. Control Structures
+  * **Early Returns:** Omit redundant `else` blocks. If an `if` block ends in a `return`, `break`, or `continue`, do not use an `else` block for the next statements. Keep the successful/normal execution path at the outermost indentation level.
+  * **For Loops:** Use the `for range` syntax when iterating over a slice, array, string, map, or channel reading.
+  * **Switch Statements:** Prefer `switch` over long `if-else-if` chains. Remember that Go `switch` cases do not fall through by default (unless `fallthrough` is explicitly used).
+  * **Type Switches:** Use type switches to discover the dynamic type of an interface variable.
+
+  ## 4. Functions & Methods
+  * **Multiple Return Values:** Heavily utilize Go's ability to return multiple values, especially for returning `(result, error)`.
+  * **Named Result Parameters:** Use named return parameters only if they improve the readability of the code or are required for documentation/`defer` closures.
+  * **Defer:** Always use `defer` to ensure cleanup (e.g., closing files, unlocking mutexes) occurs immediately after the resource is successfully acquired.
+  * **Method Receivers (Value vs. Pointer):** * Use a pointer receiver `*T` if the method modifies the receiver or if the struct is large (to avoid copying).
+    * Use a value receiver `T` if the receiver is a small struct, an array, a slice, a map, or a basic type, and the method does not mutate it.
+
+  ## 5. Data Allocation & Initialization
+  * **`new` vs `make`:**
+    * Use `new(T)` to allocate zeroed memory for a type `T` and return a pointer `*T`.
+    * Use `make(T, args)` *only* for slices, maps, and channels. It returns an initialized (not zeroed) value of type `T`.
+  * **Composite Literals:** Use composite literals to initialize structs, arrays, slices, and maps concisely.
+  * **Slices over Arrays:** Prefer slices over arrays in almost all circumstances, as they are more idiomatic and flexible.
+
+  ## 6. Interfaces & Typing
+  * **Generality:** Use interfaces to specify behavior. Interfaces with only one or two methods are common and idiomatic.
+  * **Duck Typing:** Do not declare that a type implements an interface (Go does not have an `implements` keyword). Simply implement the required methods.
+  * **Empty Interface:** Use `any` (or `interface{}`) only when the type is truly unknown, but prefer concrete types or specific interfaces whenever possible.
+
+  ## 7. Concurrency
+  * **Motto:** "Do not communicate by sharing memory; instead, share memory by communicating."
+  * **Channels:** Use channels to pass data between goroutines and to synchronize execution. 
+  * **Goroutines:** Feel free to use goroutines liberally; they are cheap and lightweight compared to OS threads.
+
+  ## 8. Error Handling
+  * **Standard Errors:** Return errors as the last return value of a function. The caller must check errors explicitly. Avoid ignoring errors.
+  * **Custom Errors:** Implement the `error` interface (`Error() string`) for custom error types.
+  * **Panic:** Use `panic` *only* for truly unrecoverable, catastrophic errors (e.g., out of bounds, nil pointer dereferences, or when initialization fails entirely). Do not use `panic` for normal error handling.
+  * **Recover:** If you must catch a panic, use `recover()` inside a deferred function, usually within the package boundaries so it doesn't bleed out to callers.
+claude:
+  paths:
+    - "**/*.go"

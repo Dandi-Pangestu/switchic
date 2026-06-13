@@ -1,0 +1,41 @@
+name: worktree-cleanup
+description: |
+  Removes a git worktree created by the worktree-setup skill and deregisters its entry from
+  the session registry. Use when cleaning up a completed or abandoned parallel agent session.
+prompt: |
+  To clean up a parallel agent session worktree:
+
+  ## Inputs
+
+  You will receive the following from the invoking agent:
+  - `JIRA_KEY` — the Jira ticket key of the session to remove (e.g. `QC-99999`)
+  - `REPO_ROOT` — absolute path to the primary repository root (e.g. `/Users/you/hub_core`)
+
+  ## Steps
+
+  1. Locate the script at `<SKILL_DIR>/scripts/worktree-cleanup.sh` where `<SKILL_DIR>` is the directory containing this SKILL.md file.
+
+  2. Ensure the script is executable:
+     ```
+     chmod +x <SKILL_DIR>/scripts/worktree-cleanup.sh
+     ```
+
+  3. Execute the script with the two inputs as positional arguments:
+     ```
+     bash <SKILL_DIR>/scripts/worktree-cleanup.sh <JIRA_KEY> <REPO_ROOT>
+     ```
+
+  4. Confirm the result to the user.
+
+  ## Output
+
+  - A confirmation message that the worktree was removed and the registry entry deleted.
+
+  ## Error Handling
+
+  If the script exits non-zero, surface the full error output to the user immediately.
+
+  Common causes of failure:
+  - `JIRA_KEY` not found in registry — session may have already been cleaned up
+  - `jq` not installed — fix: `brew install jq`
+  - Worktree directory already manually deleted — script handles this gracefully by pruning and removing the registry entry

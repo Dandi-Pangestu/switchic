@@ -1,0 +1,147 @@
+# Example skill definition — use this file as a reference when creating new skills.
+# All available fields are shown below with descriptions and valid values.
+
+# ─── Core fields (cross-platform) ────────────────────────────────────────────
+
+# name
+# Display name shown in skill listings. Defaults to the file/directory name.
+# Note: the slash command you type comes from the filename or directory name,
+# not this field. This field only affects how the skill appears in listings.
+name: example
+
+# description [recommended]
+# What the skill does and when to use it. Claude uses this to decide when to
+# apply the skill automatically. Put the key use case first — the combined
+# description + when_to_use text is truncated at 1536 characters in listings.
+description: >-
+  Example skill that demonstrates every available field. Use as a starting point
+  or reference when defining new skills in switchic.
+
+# prompt
+# The instructions Claude follows when this skill runs. This becomes the skill
+# body in the generated SKILL.md. Supports dynamic context injection with
+# !`command` to inline shell output before Claude sees the content.
+prompt: |
+  You are running the example skill. Replace this prompt with your own instructions.
+
+  ## Available substitutions
+
+  - `$ARGUMENTS` — all arguments passed when invoking the skill
+  - `$0`, `$1`, ... — individual arguments by position
+  - `$name` — named argument (declared in claude.arguments below)
+  - `${CLAUDE_SESSION_ID}` — current session ID
+  - `${CLAUDE_EFFORT}` — current effort level
+  - `${CLAUDE_SKILL_DIR}` — directory containing this SKILL.md
+
+  ## Dynamic context injection
+
+  Use !`command` to run a shell command and inline its output:
+
+    Current branch: !`git branch --show-current`
+
+  The command runs before Claude sees anything, so the output arrives already inlined.
+
+# ─── Platform-specific fields ─────────────────────────────────────────────────
+
+# claude:
+# Fields under this key are emitted into .claude/skills/<name>/SKILL.md
+# when running `switchic switch claude`.
+claude:
+  # when_to_use
+  # Additional context appended to `description` in the skill listing.
+  # Use to add trigger phrases or example requests without bloating description.
+  # Combined with description, capped at 1536 characters in listings.
+  when_to_use: Use when the user asks for an example or reference skill definition.
+
+  # disable-model-invocation
+  # true: only you can invoke this skill (via /name). Claude cannot load it
+  #       automatically and it is removed from Claude's context.
+  # false (default): both you and Claude can invoke it.
+  # Use true for workflows with side effects (deploy, commit, send-message).
+  # Note: setting this to false (the default) will not appear in generated output.
+  disable-model-invocation: true
+
+  # user-invocable
+  # false: hides the skill from the / menu. Claude can still invoke it.
+  # true (default): appears in the / menu and can be invoked directly.
+  # Use false for background knowledge that isn't meaningful as a user command.
+  # Note: setting this to true (the default) will not appear in generated output.
+  # Omit this field entirely to keep the default (true).
+  user-invocable: false
+
+  # argument-hint
+  # Hint shown in autocomplete to indicate expected arguments.
+  # Examples: "[issue-number]", "[filename] [format]", "<source> <target>"
+  argument-hint: "[optional-arg]"
+
+  # arguments
+  # Named positional arguments for $name substitution in the prompt.
+  # Accepts a space-separated string or a YAML list. Names map to positions in order.
+  # Example: with `arguments: [source, target]`, $source = $0 and $target = $1.
+  arguments:
+    - source
+    - target
+
+  # allowed-tools
+  # Tools Claude may use without per-use approval while this skill is active.
+  # Does not restrict which tools are available — only pre-approves listed ones.
+  # Accepts a space- or comma-separated string, or a YAML list.
+  allowed-tools: "Read Bash(git *)"
+
+  # disallowed-tools
+  # Tools removed from Claude's available pool while this skill is active.
+  # The restriction clears when you send your next message.
+  # Use for autonomous skills that should never ask questions (e.g. AskUserQuestion).
+  disallowed-tools: "AskUserQuestion"
+
+  # model
+  # Model override for this skill's turn. Reverts to the session model on the next prompt.
+  # Options: sonnet | opus | haiku | fable | inherit | <full-model-id>
+  model: sonnet
+
+  # effort
+  # Thinking effort level for this skill's turn. Overrides the session default.
+  # Options: low | medium | high | xhigh | max
+  effort: high
+
+  # context
+  # Set to "fork" to run this skill in an isolated subagent context.
+  # The skill content becomes the subagent's task prompt. It won't see conversation history.
+  # Use for research or side tasks that would flood the main context with noise.
+  context: fork
+
+  # agent
+  # Subagent type to use when context is "fork".
+  # Options: Explore | Plan | general-purpose | <custom-agent-name>
+  # Defaults to general-purpose if omitted.
+  agent: Explore
+
+  # shell
+  # Shell used for !`command` and ```! blocks in this skill.
+  # Options: bash (default) | powershell
+  # powershell requires CLAUDE_CODE_USE_POWERSHELL_TOOL=1.
+  shell: bash
+
+  # paths
+  # Glob patterns that limit automatic activation to files matching the pattern.
+  # Claude only loads this skill automatically when working with matching files.
+  # Accepts a comma-separated string or a YAML list.
+  paths:
+    - "src/**/*.ts"
+    - "src/**/*.tsx"
+
+  # hooks
+  # Lifecycle hooks scoped to this skill only.
+  # Supported events: PreToolUse | PostToolUse | Stop
+  # Same format as agent hooks.
+  hooks:
+    PreToolUse:
+      - matcher: Bash
+        hooks:
+          - type: command
+            command: ./scripts/validate-command.sh
+    PostToolUse:
+      - matcher: "Edit|Write"
+        hooks:
+          - type: command
+            command: ./scripts/run-linter.sh

@@ -1,0 +1,73 @@
+name: jira-ticket-description
+description: |
+  Guide for producing Jira ticket descriptions with consistent sections: Context / Background,
+  Endpoints, Acceptance Criteria, Technical Guide, Notes, and References; use when creating or
+  refining Jira ticket descriptions so they are implementation-ready and QA-friendly.
+prompt: |
+  To produce a high-quality Jira ticket description:
+
+  0. If the user provides Confluence links, read the page details first and extract the relevant product, scope, workflow, and acceptance context before drafting the Jira description.
+  0. If the user provides links to existing Jira tickets, read those ticket details first and use them as supporting context for scope, dependencies, prior decisions, and terminology alignment.
+  0. Suggest a clear, concise Jira title (subject line) that captures the work type and primary goal in 5–10 words. Use verb-noun or actor-action phrasing (e.g., "Add webhook retry mechanism for failed deliveries", "Integrate Stripe payment provider", "Fix race condition in message deduplication"). Avoid vague titles; be specific about the domain or feature area.
+  1. Use the exact section headers and exact order shown in the example structure.
+  2. Write the entire Jira ticket description in clear, professional English.
+  3. Keep Context / Background business-oriented: what problem, who is affected, and why this work matters now.
+  4. In Endpoints, list each impacted endpoint. If there are no API changes, explicitly write "No API changes / N/A".
+     - For each endpoint include: Method + Path, Auth, Request fields (path/query/body), Response (status + body shape), and Errors.
+  5. In Acceptance Criteria, write checklist bullets that define done from a feature perspective and include QA test steps.
+  6. In Technical Guide, provide technical guidance for implementers (modules/components to change, data model changes, migration notes, backward compatibility, rollout).
+  7. Notes is optional; use it for constraints, edge cases, and explicit out-of-scope items.
+  8. References must be links to supporting material (PRD, Confluence page, existing Jira ticket, design doc, API docs, Slack thread, related tickets).
+  9. When references are provided, synthesize the important details from them into the main sections instead of only listing the links at the end.
+  10. When multiple references conflict, call out the ambiguity in Notes and prefer the most current or authoritative source if it is clear.
+
+  Example structure:
+
+  ## Title (suggested)
+  [Verb-noun phrase, 5–10 words, specific to the work type and goal]
+
+  ## Context / Background
+  - Current behavior: …
+  - Problem statement: …
+  - Goal: …
+  - Impact: …
+
+  ## Endpoints
+  - Endpoint: [METHOD] /path
+    - Auth: …
+    - Request:
+      - Path params: …
+      - Query params: …
+      - Body fields:
+        - field_name (type, required?): description
+    - Response:
+      - 200: …
+    - Errors:
+      - 400: …
+      - 401/403: …
+      - 404: …
+      - 422: …
+
+  ## Acceptance Criteria
+  - [ ] AC1: …
+  - [ ] AC2: …
+  - [ ] QA: Steps to verify …
+
+  ## Technical Guide
+  - Components/modules to update: …
+  - Data changes (if any): …
+  - Backward compatibility: …
+  - Rollout plan (if any): …
+
+  ## Notes
+  - …
+
+  ## References
+  - …
+
+  Reference handling guidance:
+
+  - Confluence links are valid source inputs. Read the page content and use it to ground Context / Background, Acceptance Criteria, and Technical Guide.
+  - Existing Jira links are valid source inputs. Read the issue details and use them to align terminology, dependencies, prior scope, and implementation constraints.
+  - If the user provides both Confluence and Jira links, combine both sources and remove duplication while preserving the authoritative details.
+  - If a reference link is inaccessible or missing critical details, state the gap explicitly and continue with the information that is available.

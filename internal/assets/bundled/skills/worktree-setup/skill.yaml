@@ -1,0 +1,51 @@
+name: worktree-setup
+description: |
+  Provisions a new git worktree at a sibling path of the repository root for a parallel agent
+  session; use when starting an isolated parallel agent session branched off latest production.
+prompt: |
+  To provision a parallel agent session worktree:
+
+  ## Inputs
+
+  You will receive the following from the invoking agent:
+  - `JIRA_KEY` — the Jira ticket key (e.g. `QC-99999`)
+  - `JIRA_TITLE_SLUG` — the Jira title slug: lowercase, hyphens only, max 6 words (e.g. `fix-nil-error-message-send`)
+  - `REPO_ROOT` — absolute path to the repository root (e.g. `/Users/you/hub_core`)
+
+  ## Steps
+
+  1. Locate the script at `<SKILL_DIR>/scripts/worktree-setup.sh` where `<SKILL_DIR>` is the directory containing this SKILL.md file.
+
+  2. Ensure the script is executable:
+     ```
+     chmod +x <SKILL_DIR>/scripts/worktree-setup.sh
+     ```
+
+  3. Execute the script with the three inputs as positional arguments:
+     ```
+     bash <SKILL_DIR>/scripts/worktree-setup.sh <JIRA_KEY> <JIRA_TITLE_SLUG> <REPO_ROOT>
+     ```
+
+  4. The script will output two lines to stdout:
+     ```
+     WORKTREE_PATH=<absolute-path>
+     BRANCH_NAME=<branch-name>
+     ```
+     Parse these lines to extract the values and store them as session variables.
+
+  5. Pass `WORKTREE_PATH` and `BRANCH_NAME` to all downstream agents.
+
+  ## Output
+
+  Return to the invoking agent:
+  - `WORKTREE_PATH` — absolute path of the provisioned worktree
+  - `BRANCH_NAME` — name of the newly created branch (e.g. `feature/QC-99999-fix-nil-message-send`)
+
+  ## Error Handling
+
+  If the script exits non-zero, surface the full error output to the user immediately and halt. Do not continue the workflow.
+
+  Common causes of failure:
+  - `jq` is not installed — fix: `brew install jq`
+  - `production` branch has local conflicts — user must resolve manually
+  - Worktree path already exists — user may need to run `@session-manager cleanup <KEY>` first
