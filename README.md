@@ -313,17 +313,93 @@ switchic switch claude
 Created by `switchic init`. Edit manually or use `switchic add` / `switchic remove`.
 
 ```yaml
-platform: claude
+# ── Platform & workflow ──────────────────────────────────────────────────────
+platform: claude           # target AI assistant (only "claude" is supported today)
+
 workflows:
-  active: [coding]       # workflow presets to apply; their agents/skills are auto-activated
-language: go
+  active:
+    - coding               # workflow presets to apply; their agents/skills are auto-activated
+
+# ── Project identity ─────────────────────────────────────────────────────────
+# These fields are written into the generated CLAUDE.md header so the AI
+# understands what it is working on without reading the whole codebase.
+
+name: broadcast-service    # project name; defaults to directory name if omitted
+description: >
+  Microservice responsible for broadcasting messages to email, SMS, and push
+  notification channels. Provides a unified interface and ensures reliable
+  delivery across platforms.
+
+language: go               # primary language (used if stack is not set)
+
+stack:                     # tech stack list (renders instead of language when set)
+  - Go
+  - PostgreSQL
+
+# ── Developer commands ────────────────────────────────────────────────────────
+# Injected into CLAUDE.md as a quick-reference table so the AI knows what
+# commands to run without reading Makefile or package.json.
+
+commands:
+  build:
+    run: make build
+    description: Compile binary with version ldflags
+  dev:
+    run: go run .
+    description: Start the dev server
+  test:
+    run: make test
+    description: Run the full test suite
+
+# ── Directory map ─────────────────────────────────────────────────────────────
+# Key → short description. Tells the AI where to look before searching.
+
+structure:
+  cmd/:      CLI entry points — wiring only, no business logic
+  config/:   Configuration files and templates
+  internal/: Private packages and all business logic
+  pkg/:      Reusable libraries and utilities
+
+# ── Coding conventions ────────────────────────────────────────────────────────
+# Non-default patterns only. Skip anything enforced by a linter or the
+# language standard — the AI already knows those.
+
+conventions:
+  - Go modules for dependency management
+  - Makefile for build and common tasks
+  - Docker for containerization
+  - GitHub Actions for CI/CD
+
+# ── Do / Don't ────────────────────────────────────────────────────────────────
+dos:
+  - Add new providers by implementing the Provider interface in pkg/providers/
+  - Write table-driven tests with t.Run() for handlers and providers
+
+donts:
+  - Don't put business logic in cmd/ — it's wiring only
+  - Don't call external SDKs directly — always go through internal/providers/
+
+# ── Reference docs ────────────────────────────────────────────────────────────
+# Paths relative to the repo root. The "when" field scopes the @-mention to a
+# specific trigger so the AI only loads the doc when it is relevant.
+
+docs:
+  - path: README.md
+    when: project overview or setup instructions are needed
+
+# ── Components ────────────────────────────────────────────────────────────────
 agents:
   active: []             # extends the workflow preset; leave empty to rely on preset only
+
 skills:
   active: []
+
 rules:
-  active: [golang]
+  active:
+    - golang
 ```
+
+Fields omitted from `switchic init` output are optional — add them as your project grows.
 
 ### `switchic.workspace.yaml` (multi-repo) *(coming soon)*
 

@@ -1,22 +1,65 @@
 # Example project config — copy to .switchic/config.yaml inside a repo and
 # edit. The file is normally created by `switchic init`.
+
 platform: claude
-workflow: coding
+
+workflows:
+  active:
+    - coding
+
+name: broadcast-service
+description: >
+  Microservice responsible for broadcasting messages to email, SMS, and push
+  notification channels. Provides a unified interface and ensures reliable
+  delivery across platforms.
+
 language: go
 
+stack:
+  - Go
+  - PostgreSQL
+
+commands:
+  build:
+    run: make build
+    description: Compile binary with version ldflags
+  dev:
+    run: go run .
+    description: Start the dev server
+  test:
+    run: make test
+    description: Run the full test suite
+
+structure:
+  cmd/:      CLI entry points — wiring only, no business logic
+  config/:   Configuration files and templates
+  internal/: Private packages and all business logic
+  pkg/:      Reusable libraries and utilities
+
+conventions:
+  - Go modules for dependency management
+  - Makefile for build and common tasks
+  - Docker for containerization
+  - GitHub Actions for CI/CD
+
+dos:
+  - Add new providers by implementing the Provider interface in pkg/providers/
+  - Write table-driven tests with t.Run() for handlers and providers
+
+donts:
+  - Don't put business logic in cmd/ — it's wiring only
+  - Don't call external SDKs directly — always go through internal/providers/
+
+docs:
+  - path: README.md
+    when: project overview or setup instructions are needed
+
 agents:
-  active:
-    - planner
-    - builder
-    - verifier
+  active: []
 
 skills:
-  active:
-    - codegen
-    - testgen
-    - lint
+  active: []
 
 rules:
   active:
-    - global
     - golang
