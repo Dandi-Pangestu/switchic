@@ -9,9 +9,10 @@
 **switchic** is a CLI tool that manages the agentic context loaded into AI coding assistants. Instead of manually maintaining `CLAUDE.md`, Cursor rules, or Copilot instructions for each project, you define your agents, skills, and rules once — then let switchic generate the right files for whatever platform you're using.
 
 ```
-switchic init          # set up a project
-switchic switch claude # generate CLAUDE.md + .claude/agents/* + .claude/rules/*
-switchic status        # see active components and token cost
+switchic init                  # set up a project
+switchic switch claude         # generate CLAUDE.md + .claude/agents/* + .claude/rules/*
+switchic switch github-copilot # generate .github/copilot-instructions.md + agents + skills
+switchic status                # see active components and token cost
 ```
 
 ---
@@ -84,9 +85,9 @@ A **workflow** is a named preset that automatically activates a bundle of agents
 
 | Platform | Status | Generated files |
 |---|---|---|
-| **Claude** (Claude Code) | Ready | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/rules/*.md` |
+| **Claude** (Claude Code) | Ready | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md` |
+| **GitHub Copilot** | Ready | `.github/copilot-instructions.md`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
 | Cursor | Coming soon | — |
-| GitHub Copilot | Coming soon | — |
 | Codex CLI | Coming soon | — |
 | Windsurf | Coming soon | — |
 
@@ -150,8 +151,9 @@ cd path/to/your/repo
 # 1. Initialize the project config
 switchic init
 
-# 2. Generate platform files for Claude
-switchic switch claude
+# 2. Generate platform files — pick your AI assistant
+switchic switch claude          # for Claude Code
+switchic switch github-copilot  # for GitHub Copilot
 
 # 3. Check what's active and the token cost
 switchic status
@@ -164,12 +166,23 @@ switchic add skill commit-msg
 switchic switch claude
 ```
 
-After step 2, your repo will have:
+After `switchic switch claude`, your repo will have:
 
 ```
 CLAUDE.md                       # main context Claude reads on launch
 .claude/agents/<name>.md        # one file per active agent
 .claude/rules/<name>.md         # one file per active rule
+.claude/skills/<name>/SKILL.md  # one directory per active skill
+```
+
+After `switchic switch github-copilot`, your repo will have:
+
+```
+AGENTS.md                                          # root pointer to Copilot instructions
+.github/copilot-instructions.md                    # repository-wide context for Copilot
+.github/agents/<name>.agent.md                     # one file per active agent
+.github/instructions/<name>.instructions.md        # one file per active rule (path-specific)
+.github/skills/<name>/SKILL.md                     # one directory per active skill
 ```
 
 ### Multi-repo workspace *(coming soon)*
@@ -314,7 +327,7 @@ Created by `switchic init`. Edit manually or use `switchic add` / `switchic remo
 
 ```yaml
 # ── Platform & workflow ──────────────────────────────────────────────────────
-platform: claude           # target AI assistant (only "claude" is supported today)
+platform: claude           # target AI assistant: "claude" or "github-copilot"
 
 workflows:
   active:
@@ -453,7 +466,7 @@ cmd/                  CLI entry points (Cobra) — kept thin
 internal/app          LoadContext + Resolve — the orchestrator between layers
 internal/config       Project config model, load/save, mutators
 internal/workspace    Workspace manifest and repo registry
-internal/platform     Platform adapter interface + Claude adapter
+internal/platform     Platform adapter interface + Claude and GitHub Copilot adapters
 internal/workflow     Workflow preset model and registry
 internal/agent        Agent definitions and registry
 internal/skill        Skill definitions and registry
@@ -477,7 +490,6 @@ Generation is **deterministic** — the same config always produces the same out
 
 - **Workspace support** — multi-repo context (`switchic workspace init/add/remove/list`)
 - **Cursor adapter** — generate `.cursorrules` and Cursor agent files
-- **GitHub Copilot adapter** — generate `.github/copilot-instructions.md`
 - **Codex CLI adapter** — generate `AGENTS.md`
 - **Windsurf adapter** — generate Windsurf rules
 
@@ -508,9 +520,10 @@ Drop a YAML file under `internal/assets/bundled/<kind>/` and rebuild — no embe
 
 ### Adding a platform adapter
 
-1. Implement the `platform.Adapter` interface (`internal/platform/adapter.go`)
-2. Register it in `platform.Get` (`internal/platform/platform.go`)
-3. Add generated-file paths to the `switch` command output in `cmd/switch.go`
+1. Implement the `platform.Adapter` interface (`internal/platform/platform.go`)
+2. Register it in `platform.Get` (`internal/platform/registry.go`)
+3. Add a platform config YAML under `internal/assets/bundled/configs/platforms/`
+4. Add `copilot:` (or equivalent) blocks to bundled agent, skill, and rule YAMLs
 
 ### PR checklist
 
