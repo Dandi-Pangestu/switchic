@@ -32,3 +32,8 @@ claude:
     - mcp__gitkraken__pull_request_get_detail
     - mcp__gitkraken__repository_get_file_content
     - mcp__gitkraken__git_log_or_diff
+copilot:
+  tools:
+    - gitkraken/pull_request_get_detail
+    - gitkraken/repository_get_file_content
+    - gitkraken/git_log_or_diff

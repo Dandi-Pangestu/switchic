@@ -48,3 +48,5 @@ claude:
   paths:
     - "**/*.ts"
     - "**/*.tsx"
+copilot:
+  apply-to: "**/*.ts,**/*.tsx"

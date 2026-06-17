@@ -11,13 +11,26 @@ type EmbeddedFile struct {
 // Definition mirrors the skills/<name>.yaml (flat) or skills/<name>/skill.yaml (folder) shape.
 // Core fields are cross-platform. Platform-specific config lives under its own key.
 type Definition struct {
-	Name        string        `yaml:"name"`
-	Description string        `yaml:"description"`
-	Prompt      string        `yaml:"prompt,omitempty"`
-	Claude      *ClaudeConfig `yaml:"claude,omitempty"`
+	Name        string         `yaml:"name"`
+	Description string         `yaml:"description"`
+	Prompt      string         `yaml:"prompt,omitempty"`
+	Claude      *ClaudeConfig  `yaml:"claude,omitempty"`
+	Copilot     *CopilotConfig `yaml:"copilot,omitempty"`
 
 	// Files holds extra files from a folder-based skill; populated by LoadAll, not by YAML.
 	Files []EmbeddedFile `yaml:"-"`
+}
+
+// CopilotConfig holds GitHub Copilot-specific skill frontmatter fields.
+// These are emitted into .github/skills/<name>/SKILL.md per the agentskills.io spec.
+type CopilotConfig struct {
+	// AllowedTools is a space-separated list of pre-approved tools (experimental).
+	AllowedTools string `yaml:"allowed-tools,omitempty"`
+	// Compatibility describes environment requirements for this skill.
+	Compatibility string `yaml:"compatibility,omitempty"`
+	// License specifies the license applied to this skill.
+	License  string            `yaml:"license,omitempty"`
+	Metadata map[string]string `yaml:"metadata,omitempty"`
 }
 
 // ClaudeConfig holds Claude-specific skill frontmatter fields.

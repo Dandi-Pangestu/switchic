@@ -48,3 +48,12 @@ claude:
     - Glob
     - WebFetch
     - mcp__context7__*
+copilot:
+  tools:
+    - vscode
+    - execute
+    - read
+    - edit
+    - search
+    - web
+    - context7/*

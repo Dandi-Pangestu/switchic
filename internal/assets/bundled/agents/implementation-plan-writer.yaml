@@ -73,3 +73,12 @@ claude:
     - WebFetch
     - TodoWrite
     - mcp__context7__*
+copilot:
+  tools:
+    - vscode
+    - read
+    - edit
+    - search
+    - web
+    - context7/*
+    - todo

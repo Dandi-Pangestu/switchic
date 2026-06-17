@@ -30,3 +30,6 @@ content: |
   - **Version Controlled:** All schema changes must be driven by version-controlled migration files in the codebase, never executed manually in production environments.
   - **Idempotency:** Write migration scripts to be idempotent whenever possible (e.g., using `CREATE TABLE IF NOT EXISTS` or checking for column existence) so they can safely re-run if a deployment fails halfway through.
   - **Backward Compatibility:** Design migrations to be backward-compatible with the currently running application code to support zero-downtime, rolling deployments (e.g., add columns before removing them).
+
+copilot:
+  apply-to: "**"

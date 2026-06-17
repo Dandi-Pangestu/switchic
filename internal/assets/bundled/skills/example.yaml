@@ -145,3 +145,28 @@ claude:
         hooks:
           - type: command
             command: ./scripts/run-linter.sh
+
+# ─── GitHub Copilot-specific fields ───────────────────────────────────────────
+# Fields under this key are emitted into .github/skills/<name>/SKILL.md
+# when running `switchic switch github-copilot`.
+
+copilot:
+  # allowed-tools (experimental)
+  # Space-separated list of tools pre-approved for this skill.
+  # Common values: Bash, Read, Write (Copilot tool names, not aliases).
+  allowed-tools: Read Bash
+
+  # compatibility
+  # Describes environment requirements for this skill.
+  # Only include when the skill has specific prerequisites.
+  compatibility: Requires git installed
+
+  # license
+  # License applied to this skill.
+  license: MIT
+
+  # metadata
+  # Arbitrary key-value annotations.
+  metadata:
+    team: platform
+    version: "1.0"

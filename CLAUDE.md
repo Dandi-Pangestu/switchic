@@ -24,7 +24,7 @@ go test -run TestName ./internal/<pkg>/...
 
 The Makefile injects `VERSION` via `-ldflags -X github.com/Dandi-Pangestu/switchic/cmd.Version=...`. Plain `go build` produces a binary that reports `dev`.
 
-Module path: `github.com/Dandi-Pangestu/switchic`. Go 1.21+ required (uses `slices` and `embed` with `all:` directives).
+Module path: `github.com/Dandi-Pangestu/switchic`. Go 1.25.1+ required (uses `embed` with `all:` directives).
 
 ## Architecture
 
@@ -44,6 +44,8 @@ All bundled defaults live under `internal/assets/bundled/` (`configs/`, `workflo
 
 Callers must use `assets.FS()` — which returns `fs.Sub(raw, "bundled")` — so they see paths like `"agents/planner.yaml"`, not `"bundled/agents/planner.yaml"`. The `bundled/` prefix is stripped at the boundary.
 
+User-defined assets placed under a project's `.switchic/{agents,skills,rules,workflows}/` are loaded via `assets.LocalFS(root)` and merged on top of bundled defaults — local definitions win on name collision. This lets users override or extend any bundled YAML without touching the binary.
+
 When adding a new bundled YAML, drop it under `internal/assets/bundled/<kind>/` and rebuild — no embed list to update.
 
 ### Two-tier config with workspace precedence
@@ -58,7 +60,7 @@ Commands that mutate config (`add`, `remove`) write to the workspace manifest wh
 
 ### Deterministic generation
 
-`platform.Claude.Generate` overwrites `CLAUDE.md` and `.claude/{agents,rules}/*.md` on every `switch claude`. The generated `CLAUDE.md` itself contains a banner saying "do not edit by hand" — the tool blows away local edits. Manual changes belong in the bundled YAMLs (or, eventually, in user-supplied agent/skill/rule overrides).
+`platform.Claude.Generate` overwrites `CLAUDE.md` and `.claude/{agents,rules}/*.md` on every `switch claude`. The generated `CLAUDE.md` itself contains a banner saying "do not edit by hand" — the tool blows away local edits. Manual changes belong in the bundled YAMLs (or in user-supplied agent/skill/rule overrides under `.switchic/`).
 
 Same inputs → same outputs. This is intentional for golden testing and for safe re-runs.
 
@@ -75,9 +77,8 @@ Same inputs → same outputs. This is intentional for golden testing and for saf
 - Errors funnel through `internal/util`'s sentinels (`ErrNotFound`, `ErrAlreadyExists`, `ErrInvalidConfig`, `ErrUnknownPlatform`) and `util.Wrap` for context. Callers branch with `errors.Is`.
 - Atomic writes only: `util.WriteFile` writes to `<path>.tmp` then renames. Don't introduce direct `os.WriteFile` for config or generated files.
 - Sorted, deduplicated lists in active sets: `config.AddTo` sorts on insert.
-- Diagnostics about "undefined symbol X" that appear right after creating a file but before its sibling in the same package are stale — same-package symbols resolve once both files exist.
 
 ## Reference
 
 - `README.md` — user-facing quickstart, command table, install paths.
-- `implementation-plan_Version4.md` — original spec; MVP is Claude-only by design. Don't extend the platform registry without adding the corresponding adapter.
+- `examples/` — `single-repo/switchic.yaml` and `multi-repo/switchic.workspace.yaml` show the full config schema.
