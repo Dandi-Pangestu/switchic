@@ -14,8 +14,8 @@ and writes a valid `agent.yaml` that switchic can register and use.
 | Platform | Agent file location |
 |----------|---------------------|
 | Claude Code | `.claude/agents/<name>.md` |
+| GitHub Copilot | `.github/agents/<name>.agent.md` |
 | Cursor | `.cursor/agents/<name>.md` *(future)* |
-| GitHub Copilot | `.github/agents/<name>.md` *(future)* |
 | Windsurf | `.windsurf/agents/<name>.md` *(future)* |
 | Generic | any `<name>.md` with YAML frontmatter |
 

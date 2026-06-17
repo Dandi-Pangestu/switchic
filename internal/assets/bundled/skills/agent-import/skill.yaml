@@ -42,7 +42,7 @@ prompt: |
     - skill-name
   instructions: |                # required; the full system prompt body
     ...
-  claude:                        # only when source has claude-specific fields; omit the block entirely if empty
+  claude:                        # only when source is Claude Code; omit the block entirely if empty
     tools:                       # optional array; only when present in source
       - Read
       - Write
@@ -66,23 +66,38 @@ prompt: |
           hooks:
             - type: command
               command: ./scripts/validate.sh
+  copilot:                       # only when source is GitHub Copilot; omit the block entirely if empty
+    tools:                       # optional array of Copilot tool aliases/MCP tool names
+      - execute
+      - read
+    target: github-copilot       # optional; only when present in source
+    model: gpt-4o                # optional; only when present in source
+    disable-model-invocation: true  # optional; omit if false
+    user-invocable: false           # optional; omit if true (true is the default)
+    mcp-servers:                    # optional; preserve YAML structure verbatim
+      server-name:
+        type: http
+        url: https://...
+    metadata:                       # optional; preserve key-value map verbatim
+      key: value
   ```
 
   Rules:
   - `name` must be kebab-case. Prefer the frontmatter `name` field; fall back to the filename
-    stem. Strip spaces, `.md`, and platform-specific suffixes.
+    stem. For GitHub Copilot files, strip the `.agent.md` suffix before kebab-casing.
   - `description` is a single sentence that names the agent and states when an AI should delegate
     to it. If the source has no description, synthesize one from the instructions body — do not
     leave it blank.
   - `instructions` must be the raw body text with no frontmatter artifacts. See `formats.md` for
     per-platform cleanup rules.
-  - `tools` and `disallowed_tools` in the Claude source are comma-separated strings — split them
-    into YAML arrays. See `formats.md` for the exact Claude-to-switchic field name mapping.
-  - `required_skills` maps from the Claude `skills` field (also comma-separated) — split into
-    an array.
+  - For Claude sources: `tools` and `disallowed_tools` are comma-separated strings — split them
+    into YAML arrays. `required_skills` maps from the `skills` field — split into an array.
+  - For GitHub Copilot sources: `tools` is a YAML flow sequence `['a', 'b']` — parse and emit
+    as a YAML array under `copilot.tools`. All other Copilot-specific fields go in `copilot:`.
   - Do not add fields that are absent from the source unless the field is required.
   - Do not truncate the instructions. Preserve all original content verbatim.
-  - If no claude-specific fields are present after mapping, omit the `claude:` block entirely.
+  - Omit the `claude:` block entirely if no Claude-specific fields are present.
+  - Omit the `copilot:` block entirely if no Copilot-specific fields are present.
 
   ## Output path resolution
 

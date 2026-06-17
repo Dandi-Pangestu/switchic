@@ -38,23 +38,34 @@ prompt: |
   name: kebab-case-name          # required; derive from directory or filename stem if not in frontmatter
   description: |                 # required; one sentence describing what the skill does and when to invoke it
     ...
-  argument-hint: "[args]"        # optional; carry over only when present in source
-  disable-model-invocation: true # optional; only set when present in source
-  allowed-tools: "Tool1 Tool2"   # optional; carry over only when present in source
+  claude:                        # only when source is Claude Code; omit the block entirely if empty
+    argument-hint: "[args]"      # optional; only when present in source
+    disable-model-invocation: true  # optional; only when present in source
+    allowed-tools: "Read Write"  # optional; only when present in source
+  copilot:                       # only when source is GitHub Copilot or agentskills.io; omit if empty
+    allowed-tools: "Bash Read"   # optional; only when present in source
+    license: MIT                 # optional; only when present in source
+    compatibility: "Requires git" # optional; only when present in source
+    metadata:                    # optional; preserve key-value map verbatim
+      key: value
   prompt: |                      # required; the full skill instruction body
     ...
   ```
 
   Rules:
-  - `name` must be kebab-case. Prefer the frontmatter `name` field; fall back to the skill
-    directory name, then the filename stem. Strip spaces and platform-specific suffixes
-    (`.md`, `.yaml`, `-skill`).
+  - `name` must be kebab-case (lowercase letters, digits, hyphens only; no leading/trailing/consecutive
+    hyphens; max 64 chars per agentskills.io spec). Prefer the frontmatter `name` field; fall back
+    to the skill directory name, then the filename stem. Strip spaces and platform-specific suffixes
+    (`.md`, `.yaml`, `-skill`). Warn the user if the source name violates these constraints.
   - `description` is a single sentence that names the skill and states when an AI should invoke it.
     If the source has no description, synthesize one from the prompt body — do not leave it blank.
   - `prompt` must be the raw instruction text with no frontmatter artifacts or platform-specific
     decorators. See `formats.md` for per-platform cleanup rules.
+  - Route platform-specific fields to the correct block — see `formats.md` for the exact mapping.
   - Do not add fields that are absent from the source unless the field is required.
   - Do not truncate the prompt. Preserve all original instructions verbatim.
+  - Omit `claude:` entirely if no Claude-specific fields are present.
+  - Omit `copilot:` entirely if no Copilot/agentskills.io-specific fields are present.
 
   ## Output path resolution
 

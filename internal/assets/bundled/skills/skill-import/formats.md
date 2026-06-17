@@ -46,7 +46,7 @@ Check in this order. Stop at the first match.
 
 ### 1. Agent Skills SKILL.md (all platforms)
 
-All platforms share this file shape:
+All platforms share this file shape per the [agentskills.io](https://agentskills.io/specification) spec:
 
 ```
 ---
@@ -55,11 +55,12 @@ description: What this skill does and when to use it.
 # --- platform-specific fields below ---
 argument-hint: "[args]"          # Claude Code
 disable-model-invocation: true   # Claude Code, Cursor
-allowed-tools: "shell"           # Claude Code, GitHub Copilot
+allowed-tools: "shell"           # Claude Code, GitHub Copilot (experimental)
 paths: "src/**/*.ts"             # Cursor — glob scope
 when_to_use: "..."               # Windsurf — extended activation guidance
-license: MIT                     # GitHub Copilot — optional
-metadata:                        # Cursor — arbitrary key/value pairs
+license: MIT                     # agentskills.io / GitHub Copilot — optional
+compatibility: "Requires git"    # agentskills.io / GitHub Copilot — optional
+metadata:                        # agentskills.io / GitHub Copilot — optional
   key: value
 ---
 
@@ -67,25 +68,44 @@ metadata:                        # Cursor — arbitrary key/value pairs
 ...
 ```
 
+**`name` validation (agentskills.io constraints):**
+
+The `name` field must satisfy these rules — flag a warning if the source violates any of them:
+- 1–64 characters
+- Lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`) only
+- Must not start or end with a hyphen
+- Must not contain consecutive hyphens (`--`)
+- Must match the parent directory name
+
 **Core field mapping (applies to all platforms):**
 
 | switchic field | Source |
 |----------------|--------|
 | `name` | frontmatter `name`; fallback: directory or filename stem |
 | `description` | frontmatter `description`; fallback: synthesize from prompt first paragraph |
-| `argument-hint` | frontmatter `argument-hint` (Claude Code only; carry over verbatim) |
-| `disable-model-invocation` | frontmatter `disable-model-invocation` (Claude Code / Cursor) |
-| `allowed-tools` | frontmatter `allowed-tools` (Claude Code / GitHub Copilot) |
 | `prompt` | everything after the closing `---` delimiter |
 
 **Platform-specific field handling:**
 
 | Field | Platform | Action |
 |-------|----------|--------|
+| `argument-hint` | Claude Code | → `claude.argument-hint` |
+| `disable-model-invocation` | Claude Code / Cursor | → `claude.disable-model-invocation` |
+| `allowed-tools` | Claude Code | → `claude.allowed-tools` (verbatim string) |
+| `allowed-tools` | GitHub Copilot | → `copilot.allowed-tools` (verbatim string) |
+| `license` | GitHub Copilot / agentskills.io | → `copilot.license` |
+| `compatibility` | GitHub Copilot / agentskills.io | → `copilot.compatibility` |
+| `metadata` | GitHub Copilot / agentskills.io | → `copilot.metadata` (preserve key-value map) |
 | `paths` | Cursor | Do not carry over. Preserve as inline comment at top of `prompt`: `# Originally scoped to: <value>` |
 | `when_to_use` | Windsurf | If non-empty and distinct from `description`, append to `description` as a second sentence |
-| `license` | GitHub Copilot | Drop — not part of switchic schema |
-| `metadata` | Cursor | Drop — not part of switchic schema |
+
+**How to determine platform for field routing:**
+
+When the source path is `.github/skills/`, route `allowed-tools`, `license`, `compatibility`,
+and `metadata` into `copilot:`. When the source path is `.claude/skills/`, route `allowed-tools`,
+`argument-hint`, and `disable-model-invocation` into `claude:`. When the path is ambiguous
+(e.g. `.agents/skills/`), treat `license`, `compatibility`, and `metadata` as `copilot:` fields
+(per agentskills.io spec), and treat `argument-hint` / `disable-model-invocation` as `claude:` fields.
 
 ---
 
