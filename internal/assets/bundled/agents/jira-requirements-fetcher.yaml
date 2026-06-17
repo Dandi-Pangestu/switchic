@@ -24,3 +24,6 @@ instructions: |
 claude:
   tools:
     - mcp__mcp-atlassian-http__*
+copilot:
+  tools:
+    - mcp-atlassian-http/*

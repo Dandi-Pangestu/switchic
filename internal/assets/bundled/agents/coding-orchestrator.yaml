@@ -37,3 +37,12 @@ claude:
     - Glob
     - WebFetch
     - TodoWrite
+copilot:
+  tools:
+    - vscode
+    - execute
+    - read
+    - agent
+    - search
+    - web
+    - todo

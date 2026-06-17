@@ -12,8 +12,8 @@ named directory. The directory location and frontmatter field names differ per p
 | Platform | Agent file location |
 |----------|---------------------|
 | Claude Code | `.claude/agents/<name>.md` |
+| GitHub Copilot | `.github/agents/<name>.agent.md` |
 | Cursor | `.cursor/agents/<name>.md` *(future)* |
-| GitHub Copilot | `.github/agents/<name>.md` *(future)* |
 | Windsurf | `.windsurf/agents/<name>.md` *(future)* |
 | Generic | `.agents/<name>.md` or any `<name>.md` |
 
@@ -31,13 +31,13 @@ Check in this order. Stop at the first match.
 
 **Platform detection from path** (used for format 2 only):
 
-| Path contains | Platform |
-|---------------|----------|
-| `.claude/` | Claude Code |
-| `.cursor/` | Cursor |
-| `.github/` | GitHub Copilot |
-| `.windsurf/` | Windsurf |
-| `.agents/` or unknown | Generic |
+| Path contains | Filename ends with | Platform |
+|---------------|--------------------|----------|
+| `.claude/agents/` | `.md` | Claude Code |
+| `.github/agents/` | `.agent.md` | GitHub Copilot |
+| `.cursor/agents/` | `.md` | Cursor |
+| `.windsurf/agents/` | `.md` | Windsurf |
+| `.agents/` or unknown | any | Generic |
 
 ---
 
@@ -122,14 +122,75 @@ claude:
 
 ---
 
-### 2. Already switchic YAML
+### 2. GitHub Copilot — `.github/agents/<name>.agent.md`
+
+Copilot uses kebab-case frontmatter keys. Platform-specific fields map into the `copilot:` block
+of the switchic YAML.
+
+**Source shape:**
+
+```
+---
+name: my-agent
+description: What this agent does.
+tools: ['execute', 'read', 'edit', 'search', 'web', 'todo']
+target: github-copilot
+model: gpt-4o
+disable-model-invocation: true
+user-invocable: false
+mcp-servers:
+  my-server:
+    type: http
+    url: https://api.example.com/mcp
+metadata:
+  team: platform
+  version: "1.0"
+---
+
+System prompt body here.
+```
+
+**Field mapping:**
+
+| switchic field | Copilot frontmatter key | Notes |
+|----------------|-------------------------|-------|
+| `name` | `name` | Fallback: filename stem, strip `.agent.md` suffix |
+| `description` | `description` | Synthesize from instructions if absent |
+| `instructions` | Body after closing `---` | Strip any leaked frontmatter |
+| `copilot.tools` | `tools` | Flow sequence `['a', 'b']` or comma-string → YAML array |
+| `copilot.target` | `target` | Carry over verbatim; omit if absent |
+| `copilot.model` | `model` | Carry over verbatim |
+| `copilot.disable-model-invocation` | `disable-model-invocation` | Boolean; omit if false |
+| `copilot.user-invocable` | `user-invocable` | Boolean; omit if true (true is the default) |
+| `copilot.mcp-servers` | `mcp-servers` | Preserve YAML structure verbatim |
+| `copilot.metadata` | `metadata` | Preserve key-value map verbatim |
+
+**Tools format note:** Copilot serializes `tools` as a YAML flow sequence with single-quoted
+strings: `['execute', 'read']`. Parse this as a list and emit as a YAML array in the switchic
+output:
+
+```
+# Copilot source
+tools: ['execute', 'read', 'edit']
+
+# switchic output
+copilot:
+  tools:
+    - execute
+    - read
+    - edit
+```
+
+---
+
+### 3. Already switchic YAML
 
 If `name:` and `instructions:` are both present as top-level YAML keys, the file is already in
 switchic format. Report this to the user and do not overwrite unless they explicitly ask.
 
 ---
 
-### 3. Generic markdown agent
+### 4. Generic markdown agent
 
 Plain markdown with no YAML frontmatter.
 
@@ -150,14 +211,13 @@ When support for these platforms is added, extend the detection rules and add a 
 | Platform | Expected agent location | Notes |
 |----------|------------------------|-------|
 | Cursor | `.cursor/agents/<name>.md` | Likely uses snake_case; confirm when spec is available |
-| GitHub Copilot | `.github/agents/<name>.md` | Field names TBD |
 | Windsurf | `.windsurf/agents/<name>.md` | Field names TBD |
 
 When implementing a new platform, follow this pattern:
 1. Add a detection rule in the table above.
 2. Add a "Format field mappings" section for that platform.
 3. Map platform-specific fields to either the shared block (`name`, `description`,
-   `required_skills`, `instructions`) or a new platform block (e.g. `cursor:`, `copilot:`).
+   `required_skills`, `instructions`) or a new platform block (e.g. `cursor:`).
 
 ---
 

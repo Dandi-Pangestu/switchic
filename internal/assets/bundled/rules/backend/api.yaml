@@ -64,3 +64,6 @@ content: |
   - **Idempotency Keys:** Support an `Idempotency-Key` header for non-idempotent `POST` requests so clients can safely retry network timeouts without duplicating operations.
   - **Rate Limiting:** Specify throttling thresholds. When limits are exceeded, return **`429 Too Many Requests`** along with a `Retry-After` header.
   - **Error Payloads:** When returning 4xx or 5xx errors, provide a structured error object containing an internal machine-readable error code and a human-readable message, but *never* expose internal stack traces.
+
+copilot:
+  apply-to: "**"

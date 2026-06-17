@@ -9,6 +9,8 @@ func Get(name string) (Adapter, error) {
 	switch name {
 	case "claude":
 		return Claude{}, nil
+	case "github-copilot":
+		return Copilot{}, nil
 	default:
 		return nil, util.Wrap(util.ErrUnknownPlatform, "platform %q", name)
 	}
@@ -16,5 +18,5 @@ func Get(name string) (Adapter, error) {
 
 // Available returns the list of platform names this build supports.
 func Available() []string {
-	return []string{"claude"}
+	return []string{"claude", "github-copilot"}
 }

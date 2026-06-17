@@ -1,0 +1,14 @@
+name: github-copilot
+display_name: GitHub Copilot
+description: GitHub Copilot cloud agent (github.com)
+output:
+  primary_file: .github/copilot-instructions.md
+  agents_md: AGENTS.md
+  agents_dir: .github/agents
+  rules_dir: .github/instructions
+  skills_dir: .github/skills
+context:
+  include_agents: true
+  include_skills: true
+  include_rules: true
+  include_workspace_summary: true

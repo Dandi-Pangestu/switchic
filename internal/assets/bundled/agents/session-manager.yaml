@@ -48,3 +48,8 @@ claude:
     - Read
     - Write
     - Edit
+copilot:
+  tools:
+    - execute
+    - read
+    - edit
