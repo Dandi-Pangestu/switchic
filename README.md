@@ -87,7 +87,7 @@ A **workflow** is a named preset that automatically activates a bundle of agents
 | Platform | Status | Generated files |
 |---|---|---|
 | **Claude** (Claude Code) | Ready | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md` |
-| **GitHub Copilot** | Ready | `.github/copilot-instructions.md`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
+| **GitHub Copilot** | Ready | `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
 | **Kiro** (Kiro CLI) | Ready | `AGENTS.md`, `.kiro/steering/project.md`, `.kiro/agents/*.json`, `.kiro/steering/*.md`, `.kiro/skills/*/SKILL.md` |
 | Cursor | Coming soon | — |
 | Codex CLI | Coming soon | — |
@@ -180,8 +180,8 @@ CLAUDE.md                       # main context Claude reads on launch
 After `switchic switch github-copilot`, your repo will have:
 
 ```
-AGENTS.md                                          # root pointer to Copilot instructions
-.github/copilot-instructions.md                    # repository-wide context for Copilot
+AGENTS.md                                          # full project context (primary source of truth)
+.github/copilot-instructions.md                    # pointer to AGENTS.md via @AGENTS.md
 .github/agents/<name>.agent.md                     # one file per active agent
 .github/instructions/<name>.instructions.md        # one file per active rule (path-specific)
 .github/skills/<name>/SKILL.md                     # one directory per active skill
