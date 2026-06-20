@@ -82,3 +82,16 @@ copilot:
     - web
     - context7/*
     - todo
+kiro:
+  tools:
+    - read
+    - write
+    - glob
+    - grep
+    - web_search
+    - web_fetch
+    - knowledge
+    - todo
+    - "@context7"
+  allowed_tools:
+    - read

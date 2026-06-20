@@ -16,9 +16,19 @@ type Definition struct {
 	Prompt      string         `yaml:"prompt,omitempty"`
 	Claude      *ClaudeConfig  `yaml:"claude,omitempty"`
 	Copilot     *CopilotConfig `yaml:"copilot,omitempty"`
+	Kiro        *KiroConfig    `yaml:"kiro,omitempty"`
 
 	// Files holds extra files from a folder-based skill; populated by LoadAll, not by YAML.
 	Files []EmbeddedFile `yaml:"-"`
+}
+
+// KiroConfig holds Kiro CLI-specific skill frontmatter fields.
+// These are emitted into .kiro/skills/<name>/SKILL.md when generating for the kiro platform.
+type KiroConfig struct {
+	AllowedTools  string            `yaml:"allowed-tools,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
 }
 
 // CopilotConfig holds GitHub Copilot-specific skill frontmatter fields.

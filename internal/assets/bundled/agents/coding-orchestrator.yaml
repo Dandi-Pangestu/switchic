@@ -46,3 +46,26 @@ copilot:
     - search
     - web
     - todo
+kiro:
+  tools:
+    - read
+    - shell
+    - glob
+    - grep
+    - web_search
+    - web_fetch
+    - todo
+    - subagent
+  allowed_tools:
+    - read
+    - shell
+  tools_settings:
+    subagent:
+      availableAgents:
+        - jira-requirements-fetcher
+        - pr-details-fetcher
+        - session-bootstraper
+        - implementation-plan-writer
+        - code-implementer
+        - code-reviewer
+        - session-manager

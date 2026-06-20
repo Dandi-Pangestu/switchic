@@ -8,10 +8,31 @@ type Definition struct {
 	Content     string         `yaml:"content"`
 	Claude      *ClaudeConfig  `yaml:"claude,omitempty"`
 	Copilot     *CopilotConfig `yaml:"copilot,omitempty"`
+	Kiro        *KiroConfig    `yaml:"kiro,omitempty"`
 
 	// Dir is the subdirectory path relative to rules/ (e.g. "backend", "frontend/components").
 	// Empty for top-level rules. Set during load, not from YAML.
 	Dir string `yaml:"-"`
+}
+
+// KiroConfig holds Kiro-specific rule metadata.
+// These are emitted as frontmatter in .kiro/steering/<name>.md.
+type KiroConfig struct {
+	// Inclusion controls when Kiro loads this steering file.
+	// Valid values: "always" (default), "fileMatch", "manual", "auto".
+	Inclusion string `yaml:"inclusion,omitempty"`
+
+	// FileMatchPattern is used when Inclusion is "fileMatch".
+	// Accepts a single glob string or a list of glob strings.
+	FileMatchPattern any `yaml:"file_match_pattern,omitempty"`
+
+	// Name is used when Inclusion is "auto".
+	// Serves as the identifier used in slash commands.
+	Name string `yaml:"name,omitempty"`
+
+	// Description is used when Inclusion is "auto".
+	// Kiro matches this against user requests to decide when to include the file.
+	Description string `yaml:"description,omitempty"`
 }
 
 // CopilotConfig holds GitHub Copilot-specific rule metadata.

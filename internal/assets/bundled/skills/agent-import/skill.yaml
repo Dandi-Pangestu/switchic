@@ -3,9 +3,6 @@ description: Convert an agent definition file from any AI coding platform (Claud
 
 claude:
   argument-hint: "<agent-file-path> [output-path]"
-  allowed-tools: "Read Write Bash(find *)"
-copilot:
-  allowed-tools: Bash Read Write
 
 prompt: |
   # Agent Import

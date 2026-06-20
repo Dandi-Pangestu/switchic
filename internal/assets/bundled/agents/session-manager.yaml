@@ -53,3 +53,10 @@ copilot:
     - execute
     - read
     - edit
+kiro:
+  tools:
+    - read
+    - write
+    - shell
+  allowed_tools:
+    - read

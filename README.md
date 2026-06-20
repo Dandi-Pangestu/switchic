@@ -12,6 +12,7 @@
 switchic init                  # set up a project
 switchic switch claude         # generate CLAUDE.md + .claude/agents/* + .claude/rules/*
 switchic switch github-copilot # generate .github/copilot-instructions.md + agents + skills
+switchic switch kiro           # generate AGENTS.md + .kiro/agents/* + .kiro/steering/*
 switchic status                # see active components and token cost
 ```
 
@@ -86,7 +87,8 @@ A **workflow** is a named preset that automatically activates a bundle of agents
 | Platform | Status | Generated files |
 |---|---|---|
 | **Claude** (Claude Code) | Ready | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md` |
-| **GitHub Copilot** | Ready | `.github/copilot-instructions.md`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
+| **GitHub Copilot** | Ready | `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
+| **Kiro** (Kiro CLI) | Ready | `AGENTS.md`, `.kiro/steering/project.md`, `.kiro/agents/*.json`, `.kiro/steering/*.md`, `.kiro/skills/*/SKILL.md` |
 | Cursor | Coming soon | — |
 | Codex CLI | Coming soon | — |
 | Windsurf | Coming soon | — |
@@ -154,6 +156,7 @@ switchic init
 # 2. Generate platform files — pick your AI assistant
 switchic switch claude          # for Claude Code
 switchic switch github-copilot  # for GitHub Copilot
+switchic switch kiro            # for Kiro
 
 # 3. Check what's active and the token cost
 switchic status
@@ -163,7 +166,7 @@ switchic remove agent code-reviewer
 switchic add skill commit-msg
 
 # 5. Regenerate after any mutation
-switchic switch claude
+switchic switch claude   # or: switchic switch kiro / switchic switch github-copilot
 ```
 
 After `switchic switch claude`, your repo will have:
@@ -178,11 +181,21 @@ CLAUDE.md                       # main context Claude reads on launch
 After `switchic switch github-copilot`, your repo will have:
 
 ```
-AGENTS.md                                          # root pointer to Copilot instructions
-.github/copilot-instructions.md                    # repository-wide context for Copilot
+AGENTS.md                                          # full project context (primary source of truth)
+.github/copilot-instructions.md                    # pointer to AGENTS.md via @AGENTS.md
 .github/agents/<name>.agent.md                     # one file per active agent
 .github/instructions/<name>.instructions.md        # one file per active rule (path-specific)
 .github/skills/<name>/SKILL.md                     # one directory per active skill
+```
+
+After `switchic switch kiro`, your repo will have:
+
+```
+AGENTS.md                          # main context file (AGENTS.md standard)
+.kiro/steering/project.md          # always-included steering pointer to AGENTS.md
+.kiro/agents/<name>.json           # one file per active agent (Kiro JSON format)
+.kiro/steering/<name>.md           # one file per active rule (always-included steering)
+.kiro/skills/<name>/SKILL.md       # one directory per active skill
 ```
 
 ### Multi-repo workspace *(coming soon)*

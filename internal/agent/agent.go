@@ -5,12 +5,13 @@ package agent
 // Core fields are cross-platform. Platform-specific config lives under its
 // own key (e.g. claude:) so adapters read only what they own.
 type Definition struct {
-	Name           string        `yaml:"name"`
-	Description    string        `yaml:"description"`
-	RequiredSkills []string      `yaml:"required_skills,omitempty"`
-	Instructions   string        `yaml:"instructions,omitempty"`
-	Claude         *ClaudeConfig `yaml:"claude,omitempty"`
+	Name           string         `yaml:"name"`
+	Description    string         `yaml:"description"`
+	RequiredSkills []string       `yaml:"required_skills,omitempty"`
+	Instructions   string         `yaml:"instructions,omitempty"`
+	Claude         *ClaudeConfig  `yaml:"claude,omitempty"`
 	Copilot        *CopilotConfig `yaml:"copilot,omitempty"`
+	Kiro           *KiroConfig    `yaml:"kiro,omitempty"`
 }
 
 // CopilotConfig holds GitHub Copilot-specific frontmatter fields.
@@ -60,4 +61,20 @@ type ClaudeConfig struct {
 	// Advanced integrations — arbitrary YAML structures passed through as-is
 	McpServers interface{} `yaml:"mcp_servers,omitempty"`
 	Hooks      interface{} `yaml:"hooks,omitempty"`
+}
+
+// KiroConfig holds Kiro CLI-specific agent configuration fields.
+// These are emitted into .kiro/agents/<name>.json when generating for the kiro platform.
+type KiroConfig struct {
+	Tools            []string    `yaml:"tools,omitempty"`
+	ToolAliases      interface{} `yaml:"tool_aliases,omitempty"`
+	AllowedTools     []string    `yaml:"allowed_tools,omitempty"`
+	ToolsSettings    interface{} `yaml:"tools_settings,omitempty"`
+	Resources        interface{} `yaml:"resources,omitempty"`
+	Model            string      `yaml:"model,omitempty"`
+	McpServers       interface{} `yaml:"mcp_servers,omitempty"`
+	IncludeMcpJson   *bool       `yaml:"include_mcp_json,omitempty"`
+	Hooks            interface{} `yaml:"hooks,omitempty"`
+	WelcomeMessage   string      `yaml:"welcome_message,omitempty"`
+	KeyboardShortcut string      `yaml:"keyboard_shortcut,omitempty"`
 }

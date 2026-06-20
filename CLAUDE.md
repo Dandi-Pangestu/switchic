@@ -34,7 +34,7 @@ Reading the code top-down:
 
 1. **`cmd/`** — Cobra command handlers, kept thin. Each command reads CLI args, calls into `internal/app`, formats output via `internal/output`.
 2. **`internal/app`** — the orchestrator. `LoadContext(cwd)` discovers whether the user is in a workspace, a project, both, or neither. `Resolve(...)` merges configs and produces a `Resolved` struct that the platform adapter consumes via `Resolved.ToContext()`.
-3. **`internal/platform`** — the abstraction boundary. `Adapter.Generate(ctx)` is the single extension point for new platforms (Cursor, Copilot, etc.). `platform.Get(name)` is the registry; today it only returns `Claude{}`.
+3. **`internal/platform`** — the abstraction boundary. `Adapter.Generate(ctx)` is the single extension point for new platforms (Cursor, Codex, etc.). `platform.Get(name)` is the registry; it returns `Claude{}`, `Copilot{}`, or `Kiro{}`.
 4. **`internal/{agent,skill,rules,workflow}`** — each package owns its YAML model, a registry that reads from the embedded asset FS, and a resolver that filters by active names.
 5. **`internal/{config,workspace,project}`** — config models, load/save, mutators, single-repo + workspace bootstrap.
 
@@ -61,6 +61,10 @@ Commands that mutate config (`add`, `remove`) write to the workspace manifest wh
 ### Deterministic generation
 
 `platform.Claude.Generate` overwrites `CLAUDE.md` and `.claude/{agents,rules}/*.md` on every `switch claude`. The generated `CLAUDE.md` itself contains a banner saying "do not edit by hand" — the tool blows away local edits. Manual changes belong in the bundled YAMLs (or in user-supplied agent/skill/rule overrides under `.switchic/`).
+
+`platform.Copilot.Generate` overwrites `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents/*.agent.md`, `.github/instructions/**/*.instructions.md`, and `.github/skills/*/SKILL.md` on every `switch github-copilot`. The `copilot-instructions.md` is a fixed pointer to `AGENTS.md`. Agent files use YAML frontmatter (name, description, tools, model, etc.) followed by the instruction body. Rules become `.instructions.md` files; the `applyTo` frontmatter key comes from `copilot.apply-to`, falling back to `claude.paths` if absent.
+
+`platform.Kiro.Generate` overwrites `AGENTS.md`, `.kiro/steering/project.md`, `.kiro/agents/*.json`, `.kiro/steering/*.md`, and `.kiro/skills/*/SKILL.md` on every `switch kiro`. Agent files are written as indented JSON (`kiroAgentJSON`). Rules become steering files with a frontmatter `inclusion:` key — default `always`; rules with `kiro.inclusion: fileMatch` also emit `fileMatchPattern`; rules with `kiro.inclusion: auto` emit `name` and `description`. The `project.md` steering file is a fixed pointer (`#[[file:../../AGENTS.md]]`) so Kiro always loads the full project context.
 
 Same inputs → same outputs. This is intentional for golden testing and for safe re-runs.
 
