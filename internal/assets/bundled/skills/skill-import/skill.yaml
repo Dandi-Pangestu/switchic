@@ -3,11 +3,6 @@ description: Convert a SKILL.md from any AI coding tool (Claude Code, Cursor, Gi
 
 claude:
   argument-hint: "<skill-file-path> [output-path]"
-  allowed-tools: "Read Write Bash(find *)"
-copilot:
-  allowed-tools: Bash Read Write
-kiro:
-  allowed-tools: read write shell
 
 prompt: |
   # Skill Import
