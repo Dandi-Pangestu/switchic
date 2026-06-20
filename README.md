@@ -156,6 +156,7 @@ switchic init
 # 2. Generate platform files — pick your AI assistant
 switchic switch claude          # for Claude Code
 switchic switch github-copilot  # for GitHub Copilot
+switchic switch kiro            # for Kiro
 
 # 3. Check what's active and the token cost
 switchic status
@@ -165,7 +166,7 @@ switchic remove agent code-reviewer
 switchic add skill commit-msg
 
 # 5. Regenerate after any mutation
-switchic switch claude
+switchic switch claude   # or: switchic switch kiro / switchic switch github-copilot
 ```
 
 After `switchic switch claude`, your repo will have:
@@ -185,6 +186,16 @@ AGENTS.md                                          # full project context (prima
 .github/agents/<name>.agent.md                     # one file per active agent
 .github/instructions/<name>.instructions.md        # one file per active rule (path-specific)
 .github/skills/<name>/SKILL.md                     # one directory per active skill
+```
+
+After `switchic switch kiro`, your repo will have:
+
+```
+AGENTS.md                          # main context file (AGENTS.md standard)
+.kiro/steering/project.md          # always-included steering pointer to AGENTS.md
+.kiro/agents/<name>.json           # one file per active agent (Kiro JSON format)
+.kiro/steering/<name>.md           # one file per active rule (always-included steering)
+.kiro/skills/<name>/SKILL.md       # one directory per active skill
 ```
 
 ### Multi-repo workspace *(coming soon)*
