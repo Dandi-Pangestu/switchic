@@ -6,6 +6,8 @@ claude:
   allowed-tools: "Read Write Bash(find *)"
 copilot:
   allowed-tools: Bash Read Write
+kiro:
+  allowed-tools: read write shell
 
 prompt: |
   # Agent Import

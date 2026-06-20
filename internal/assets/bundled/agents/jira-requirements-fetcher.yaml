@@ -27,3 +27,8 @@ claude:
 copilot:
   tools:
     - mcp-atlassian-http/*
+kiro:
+  tools:
+    - "@mcp-atlassian-http"
+  allowed_tools:
+    - "@mcp-atlassian-http"

@@ -1,0 +1,13 @@
+name: kiro
+display_name: Kiro CLI
+description: Kiro CLI AI coding assistant (kiro.dev)
+output:
+  primary_file: AGENTS.md
+  steering_dir: .kiro/steering
+  agents_dir: .kiro/agents
+  skills_dir: .kiro/skills
+context:
+  include_agents: true
+  include_skills: true
+  include_rules: true
+  include_workspace_summary: true

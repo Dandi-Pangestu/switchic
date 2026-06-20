@@ -53,3 +53,6 @@ claude:
     - "**/*.go"
 copilot:
   apply-to: "**/*.go"
+kiro:
+  inclusion: fileMatch
+  file_match_pattern: "**/*.go" 

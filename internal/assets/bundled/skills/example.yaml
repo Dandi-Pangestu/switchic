@@ -170,3 +170,27 @@ copilot:
   metadata:
     team: platform
     version: "1.0"
+
+# ─── Kiro CLI-specific fields ──────────────────────────────────────────────────
+# Fields under this key are emitted into .kiro/skills/<name>/SKILL.md
+# when running `switchic switch kiro`.
+
+kiro:
+  # allowed-tools
+  # Space-separated list of tools pre-approved for this skill.
+  # Common built-ins: read, write, shell, web, knowledge
+  allowed-tools: read shell
+
+  # compatibility
+  # Describes environment requirements for this skill.
+  compatibility: Requires git installed
+
+  # license
+  # License applied to this skill (follows agentskills.io spec).
+  license: MIT
+
+  # metadata
+  # Arbitrary key-value annotations attached to this skill definition.
+  metadata:
+    team: platform
+    version: "1.0"

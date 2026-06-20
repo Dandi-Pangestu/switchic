@@ -37,3 +37,10 @@ copilot:
     - gitkraken/pull_request_get_detail
     - gitkraken/repository_get_file_content
     - gitkraken/git_log_or_diff
+kiro:
+  tools:
+    - "@gitkraken/pull_request_get_detail"
+    - "@gitkraken/repository_get_file_content"
+    - "@gitkraken/git_log_or_diff"
+  allowed_tools:
+    - "@gitkraken"

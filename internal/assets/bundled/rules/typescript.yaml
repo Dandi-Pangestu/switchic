@@ -50,3 +50,8 @@ claude:
     - "**/*.tsx"
 copilot:
   apply-to: "**/*.ts,**/*.tsx"
+kiro:
+  inclusion: fileMatch
+  file_match_pattern:
+    - "**/*.ts"
+    - "**/*.tsx"

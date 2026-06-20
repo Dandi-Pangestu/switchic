@@ -57,3 +57,15 @@ copilot:
     - search
     - web
     - context7/*
+kiro:
+  tools:
+    - read
+    - write
+    - shell
+    - glob
+    - grep
+    - web_search
+    - web_fetch
+    - "@context7"
+  allowed_tools:
+    - read

@@ -197,3 +197,118 @@ copilot:
   metadata:
     team: platform
     version: "1.0"
+
+# ─── Kiro CLI-specific fields ──────────────────────────────────────────────────
+# Fields under this key are emitted into .kiro/agents/<name>.json
+# when running `switchic switch kiro`.
+
+kiro:
+  # tools
+  # Tools available to this agent. Built-in tools by name, MCP tools with @prefix.
+  # Use "*" to grant all available tools, "@builtin" for all built-in tools,
+  # "@server_name" for all tools from a specific MCP server.
+  # Built-ins: read, write, shell, glob, grep, web_search, web_fetch, aws,
+  #            knowledge, todo, subagent, code, thinking, delegate
+  tools:
+    - read
+    - write
+    - shell
+    - glob
+    - grep
+    - web_search
+    - web_fetch
+
+  # tool_aliases
+  # Remap tool names to resolve naming collisions between MCP servers or to
+  # create shorter, more intuitive names for frequently used tools.
+  # Key: original tool name (use @server/tool_name for MCP tools).
+  # Value: new alias the agent will use.
+  tool_aliases:
+    "@github-mcp/get_issues": github_issues
+    "@gitlab-mcp/get_issues": gitlab_issues
+
+  # allowed_tools
+  # Tools that can be used without prompting the user for permission.
+  # Supports exact names, @server patterns, and glob wildcards.
+  allowed_tools:
+    - read
+    - "@git/git_status"
+
+  # tools_settings
+  # Per-tool configuration. Each key is a tool name (built-in or @server/tool).
+  # Common options:
+  #   write.allowedPaths    — restrict write to specific path globs
+  #   shell.allowedCommands — allowlist of shell commands
+  #   shell.deniedCommands  — denylist of shell commands (regex)
+  #   shell.autoAllowReadonly — auto-allow read-only shell commands
+  tools_settings:
+    write:
+      allowedPaths:
+        - src/**
+        - tests/**
+    shell:
+      allowedCommands:
+        - go test ./...
+        - go fmt ./...
+
+  # resources
+  # Resources loaded into the agent's context at startup.
+  # Supports file:// URIs (loaded directly), skill:// URIs (metadata loaded at
+  # startup, full content on demand), glob patterns, and knowledge base objects.
+  #
+  # Knowledge base object fields:
+  #   type        — must be "knowledgeBase"
+  #   source      — path to index, use file:// prefix
+  #   name        — display name
+  #   description — optional description
+  #   indexType   — "best" (default) or "fast"
+  #   autoUpdate  — re-index on agent spawn (default: false)
+  resources:
+    - file://README.md
+    - file://docs/**/*.md
+    - skill://.kiro/skills/**/SKILL.md
+    - type: knowledgeBase
+      source: file://./docs
+      name: ProjectDocs
+      description: Project documentation and guides
+      indexType: best
+      autoUpdate: false
+
+  # model
+  # Model ID to use for this agent. Omit to use the default model.
+  # Example: claude-sonnet-4
+  model: claude-sonnet-4
+
+  # welcome_message
+  # Message displayed when switching to this agent.
+  welcome_message: "Ready to help! What would you like to work on?"
+
+  # keyboard_shortcut
+  # Keyboard shortcut for quickly switching to this agent during a chat session.
+  # Format: [modifier+]key  e.g. ctrl+a, shift+b
+  keyboard_shortcut: ctrl+e
+
+  # mcp_servers
+  # MCP servers scoped exclusively to this agent.
+  # Same schema as Kiro's mcpServers field in agent JSON.
+  mcp_servers:
+    git:
+      command: git-mcp
+      args: []
+
+  # include_mcp_json
+  # When true, the agent also has access to all MCP servers defined in the
+  # global (~/.kiro/settings/mcp.json) and workspace (.kiro/settings/mcp.json)
+  # MCP configuration files, in addition to those in mcp_servers above.
+  include_mcp_json: false
+
+  # hooks
+  # Commands run at specific trigger points during agent lifecycle.
+  # Triggers: agentSpawn | userPromptSubmit | preToolUse | postToolUse | stop
+  # Hook matchers use internal tool names (fs_read, fs_write, execute_bash, use_aws).
+  hooks:
+    agentSpawn:
+      - command: git status
+    postToolUse:
+      - matcher: fs_write
+        command: go fmt ./...
