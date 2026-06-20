@@ -88,7 +88,7 @@ A **workflow** is a named preset that automatically activates a bundle of agents
 |---|---|---|
 | **Claude** (Claude Code) | Ready | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/rules/*.md`, `.claude/skills/*/SKILL.md` |
 | **GitHub Copilot** | Ready | `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents/*.agent.md`, `.github/instructions/*.instructions.md`, `.github/skills/*/SKILL.md` |
-| **Kiro** (Kiro CLI) | Ready | `AGENTS.md`, `.kiro/steering/project.md`, `.kiro/agents/*.json`, `.kiro/steering/*.md`, `.kiro/skills/*/SKILL.md` |
+| **Kiro** | Ready | `AGENTS.md`, `.kiro/steering/project.md`, `.kiro/agents/*.json`, `.kiro/steering/*.md`, `.kiro/skills/*/SKILL.md` |
 | Cursor | Coming soon | — |
 | Codex CLI | Coming soon | — |
 | Windsurf | Coming soon | — |
