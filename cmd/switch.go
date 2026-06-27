@@ -13,6 +13,8 @@ import (
 	"github.com/Dandi-Pangestu/switchic/internal/workspace"
 )
 
+var replaceFlag bool
+
 var switchCmd = &cobra.Command{
 	Use:   "switch [platform]",
 	Short: "Switch the active platform and regenerate its config files",
@@ -52,7 +54,9 @@ var switchCmd = &cobra.Command{
 			return err
 		}
 
-		written, err := adapter.Generate(resolved.ToContext())
+		pCtx := resolved.ToContext()
+		pCtx.Replace = replaceFlag
+		written, err := adapter.Generate(pCtx)
 		if err != nil {
 			return err
 		}
@@ -65,4 +69,7 @@ var switchCmd = &cobra.Command{
 	},
 }
 
-func init() { rootCmd.AddCommand(switchCmd) }
+func init() {
+	switchCmd.Flags().BoolVar(&replaceFlag, "replace", false, "overwrite existing files even if user-written (no switchic banner)")
+	rootCmd.AddCommand(switchCmd)
+}

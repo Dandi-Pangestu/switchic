@@ -32,14 +32,18 @@ func (Kiro) Generate(ctx Context) ([]string, error) {
 
 	// ── AGENTS.md ─────────────────────────────────────────────────────────────
 	agentsMdPath := filepath.Join(ctx.Root, "AGENTS.md")
+	useLocal := !ctx.Replace && util.FileExists(agentsMdPath) && !util.HasSwitchicBanner(agentsMdPath)
+	if useLocal {
+		agentsMdPath = filepath.Join(ctx.Root, "AGENTS.local.md")
+	}
 	if err := util.WriteFile(agentsMdPath, []byte(buildKiroAgentsMd(ctx))); err != nil {
 		return nil, util.Wrap(err, "write %s", agentsMdPath)
 	}
 	written = append(written, agentsMdPath)
 
-	// ── .kiro/steering/project.md ─────────────────────────────────────────────
+	// ── .kiro/steering/project.md ── always overwrite; reference tracks local flag
 	steeringProjectPath := filepath.Join(ctx.Root, ".kiro", "steering", "project.md")
-	const projectContent = "---\ninclusion: always\n---\n\n#[[file:../../AGENTS.md]]\n"
+	projectContent := buildKiroProjectSteering(useLocal)
 	if err := util.WriteFile(steeringProjectPath, []byte(projectContent)); err != nil {
 		return nil, util.Wrap(err, "write %s", steeringProjectPath)
 	}
@@ -96,6 +100,14 @@ func (Kiro) Generate(ctx Context) ([]string, error) {
 	}
 
 	return written, nil
+}
+
+func buildKiroProjectSteering(local bool) string {
+	ref := "../../AGENTS.md"
+	if local {
+		ref = "../../AGENTS.local.md"
+	}
+	return fmt.Sprintf("---\ninclusion: always\n---\n\n#[[file:%s]]\n", ref)
 }
 
 func buildKiroAgentsMd(ctx Context) string {
