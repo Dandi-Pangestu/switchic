@@ -25,6 +25,7 @@ switchic status                # see active components and token cost
 - [AI Platform Support](#ai-platform-support)
 - [Install](#install)
 - [Quickstart](#quickstart)
+  - [Speed up setup with built-in skills](#speed-up-setup-with-built-in-skills)
 - [Commands](#commands)
 - [Bundled Library](#bundled-library)
 - [User-Defined Assets](#user-defined-assets)
@@ -153,19 +154,21 @@ cd path/to/your/repo
 # 1. Initialize the project config
 switchic init
 
-# 2. Generate platform files — pick your AI assistant
+# 2. Populate project context (optional — see "Speed up setup" below)
+
+# 3. Generate platform files — pick your AI assistant
 switchic switch claude          # for Claude Code
 switchic switch github-copilot  # for GitHub Copilot
 switchic switch kiro            # for Kiro
 
-# 3. Check what's active and the token cost
+# 4. Check what's active and the token cost
 switchic status
 
-# 4. Tune the context — disable what you don't need right now
+# 5. Tune the context — disable what you don't need right now
 switchic remove agent code-reviewer
 switchic add skill commit-msg
 
-# 5. Regenerate after any mutation
+# 6. Regenerate after any mutation
 switchic switch claude   # or: switchic switch kiro / switchic switch github-copilot
 ```
 
@@ -197,6 +200,54 @@ AGENTS.md                          # main context file (AGENTS.md standard)
 .kiro/steering/<name>.md           # one file per active rule (always-included steering)
 .kiro/skills/<name>/SKILL.md       # one directory per active skill
 ```
+
+### Speed up setup with built-in skills
+
+switchic ships three skills that replace manual config and migration work.
+Enable them once, then invoke them from your AI assistant.
+
+#### `generate-context` — auto-fill project context from the codebase
+
+Instead of hand-writing `description`, `stack`, `commands`, `structure`, `conventions`,
+`dos`, `donts`, and `docs` in `.switchic/config.yaml`, let the AI scan your repo and fill
+them in:
+
+```bash
+switchic add skill generate-context
+switchic switch claude      # or kiro / github-copilot
+# then in your AI assistant: /generate-context
+```
+
+The skill reads your manifest files (go.mod, package.json, Makefile, README, etc.),
+generates each config field with the correct YAML format, and writes them into
+`.switchic/config.yaml` — preserving your existing `platform`, `workflows`, and component
+lists untouched.
+
+#### `agent-import` — migrate an agent from another platform
+
+Convert an existing agent file (Claude Code `.md`, GitHub Copilot `.agent.md`, Cursor, etc.)
+into a switchic YAML agent definition:
+
+```bash
+switchic add skill agent-import
+switchic switch claude
+# then in your AI assistant: /agent-import path/to/agent.md [output-path]
+```
+
+#### `skill-import` — migrate a skill from another platform
+
+Convert an existing `SKILL.md` from any platform into a switchic YAML skill definition:
+
+```bash
+switchic add skill skill-import
+switchic switch claude
+# then in your AI assistant: /skill-import path/to/SKILL.md [output-path]
+```
+
+Once imported, drop the output YAML into `.switchic/agents/` or `.switchic/skills/` and
+enable it with `switchic add`.
+
+---
 
 ### Multi-repo workspace *(coming soon)*
 
@@ -266,6 +317,7 @@ These agents, skills, rules, and workflows ship inside the binary. Use `switchic
 | `implementation-plan` | Guide for producing structured implementation plans for Jira tickets |
 | `jira-ticket-description` | Guide for producing Jira ticket descriptions with consistent sections |
 | `code-review-documentation` | Guide for producing structured code review summaries |
+| `generate-context` | Scan the project and auto-fill description, stack, commands, structure, conventions, dos, donts, and docs into `.switchic/config.yaml` |
 | `agent-import` | Convert an agent definition from any AI coding platform into switchic format |
 | `skill-import` | Convert a skill definition from any AI coding platform into switchic format |
 | `worktree-setup` | Provision a git worktree at a sibling path of the repository root |

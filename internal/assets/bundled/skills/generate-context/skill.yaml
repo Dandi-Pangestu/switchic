@@ -1,0 +1,171 @@
+name: generate-context
+description: |
+  Scan the current project and auto-fill description, stack, commands, structure,
+  conventions, dos, donts, and docs into .switchic/config.yaml. Run this instead of
+  filling project context by hand.
+
+claude:
+  when_to_use: >
+    When setting up a new switchic project or refreshing stale context fields in
+    .switchic/config.yaml. Use this skill any time a developer would otherwise fill
+    description, stack, commands, structure, conventions, dos, donts, or docs manually.
+  user-invocable: true
+
+prompt: |
+  Scan this project and write accurate context fields into .switchic/config.yaml.
+
+  ## Before anything else — existence check
+
+  Check whether .switchic/config.yaml exists.
+  If it does NOT exist, stop immediately and tell the user:
+    ".switchic/config.yaml not found. Run `switchic init` first, then re-run this skill."
+  Do not proceed further if the file is missing.
+
+  ## Step 1 — Survey the project
+
+  Project directory tree (auto-injected):
+  !`find . -maxdepth 3 -type d -not -path '*/.git*' -not -path '*/node_modules*' -not -path '*/.switchic*' -not -path '*/vendor*' -not -path '*/__pycache__*' -not -path '*/.venv*' | sort`
+
+  Read every file below that exists in this project (use the Read tool):
+  - README.md / README.rst / README.txt
+  - go.mod, package.json, pyproject.toml, Cargo.toml, pom.xml, build.gradle
+  - Makefile, justfile, Taskfile.yml
+  - docker-compose.yml, docker-compose.yaml
+  - .github/workflows/ (list the directory; read one or two representative workflow files)
+  - Root-level config files: tsconfig.json, .eslintrc*, vite.config.*, next.config.*, etc.
+  - CONTRIBUTING.md or docs/contributing* if present
+
+  ## Step 2 — Read the existing .switchic/config.yaml
+
+  Read .switchic/config.yaml before making any changes.
+  You MUST preserve all existing fields (platform, workflows, agents, skills, rules,
+  language, name) exactly as they are.
+  Only add or replace these eight fields: description, stack, commands, structure,
+  conventions, dos, donts, docs.
+
+  ## Step 3 — Generate each field
+
+  Apply these rules for each field:
+
+  **description** (string)
+  1-3 sentences: what the project does, for whom, and the primary technical approach.
+  Be factual. Avoid marketing language. Use YAML block scalar (description: >).
+
+  **stack** (list of strings)
+  Languages, frameworks, databases, and infra tools that are actually used.
+  Maximum 10 items. Order by importance (primary language first, then framework, then deps).
+  Only list things with direct evidence in the manifest or config files.
+
+  Each item is a plain string — never a nested object.
+
+  Correct format:
+    - Go
+    - PostgreSQL
+
+  Wrong format (never do this):
+    - name: Go
+      version: "1.25"
+
+  **commands** (map: name → {run, description})
+  The commands a developer runs every day: build, test, dev/run, lint, fmt, migrate,
+  deploy, clean — whatever is relevant for this project.
+  Infer from Makefile targets, package.json scripts, Taskfile tasks, or README examples.
+  Use the exact invocation string. Only include commands that clearly exist.
+
+  Correct format:
+    build:
+      run: make build
+      description: Compile binary with version ldflags
+
+  Wrong format (never do this):
+    build: make build
+
+  **structure** (map: path → one-line description)
+  Only non-obvious directories. Skip anything self-explanatory (e.g., skip "tests/" when
+  it obviously holds tests, skip "src/" when it is the only source directory).
+  Include paths that would confuse a new developer without a hint.
+  Append "/" to directory names.
+
+  The value is a plain string — NOT a nested object. Never use a `description:` key.
+
+  Correct format:
+    cmd/:      CLI entry points — wiring only, no business logic
+    internal/: private packages and all business logic
+    pkg/:      reusable libraries and utilities
+
+  Wrong format (never do this):
+    cmd/:
+      description: CLI entry points
+
+  **conventions** (list of strings)
+  Non-default patterns the project actually follows. Skip anything standard for the
+  language or framework. Include things like: state management choice, error-handling
+  style, naming rules, module-layout decisions, commit conventions.
+
+  Each item is a plain string — never a nested object.
+
+  Correct format:
+    - Use Zustand for state management, never Redux
+    - All API responses use { success, data, error } shape
+
+  Wrong format (never do this):
+    - rule: Use Zustand for state management
+
+  **dos** (list of strings)
+  Positive guidance — things developers SHOULD do. Start each item with an imperative
+  verb (e.g., "Use", "Write", "Prefer"). Infer from READMEs, contributing guides, and
+  code patterns.
+
+  Each item is a plain string — never a nested object.
+
+  Correct format:
+    - Write table-driven tests with t.Run()
+    - Add new providers by implementing the Provider interface
+
+  Wrong format (never do this):
+    - action: Write table-driven tests
+
+  **donts** (list of strings)
+  Negative guardrails — things developers SHOULD NOT do. Start each item with "Don't"
+  or "Never". Infer from README warnings, architecture boundaries, and anti-patterns
+  visible in the code.
+
+  Each item is a plain string — never a nested object.
+
+  Correct format:
+    - Don't put business logic in cmd/ — it's wiring only
+    - Never call external SDKs directly
+
+  Wrong format (never do this):
+    - rule: Don't put business logic in cmd/
+
+  **docs** (list of {path, when})
+  Reference files worth surfacing. Only include files that actually exist.
+  Write `when` as a short trigger: "when [situation that makes this file relevant]".
+  Only use the keys `path` and `when` — no other keys.
+
+  Correct format:
+    - path: README.md
+      when: project overview or setup instructions are needed
+
+  Wrong format (never do this):
+    - file: README.md
+      description: project overview
+    - path: README.md
+      reason: project overview
+
+  ## Step 4 — Write back to .switchic/config.yaml
+
+  Use the Edit tool to update .switchic/config.yaml:
+  - Preserve every existing field unchanged.
+  - Insert or replace only the eight context fields listed above.
+  - Omit any field for which you found no clear evidence — do not write empty lists or placeholders.
+  - Do not add YAML comments.
+
+  Editing strategy:
+  - If a field already exists in the file, use Edit to find and replace it in place.
+  - If a field is new (not yet present), use Edit to insert it immediately before the
+    `agents:` line. If there is no `agents:` line, append it at the end of the file.
+  - Handle each new field as a separate Edit call so the anchor is always unambiguous.
+
+  After writing, print one line per field you updated, naming the primary evidence you used.
