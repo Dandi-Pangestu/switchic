@@ -10,7 +10,7 @@ import (
 // exist. The manifest is seeded with the bundled defaults for platform,
 // workflow, and active agents/skills/rules so that `switch claude` produces
 // a non-empty CLAUDE.md out of the box.
-func InitWorkspace(root, name string) (workspace.Manifest, error) {
+func InitWorkspace(root, name, notes string) (workspace.Manifest, error) {
 	path := util.WorkspacePath(root)
 	if util.FileExists(path) {
 		return workspace.Manifest{}, util.ErrAlreadyExists
@@ -20,12 +20,13 @@ func InitWorkspace(root, name string) (workspace.Manifest, error) {
 		return workspace.Manifest{}, err
 	}
 	m := workspace.Manifest{
-		Name:     name,
-		Platform: defaults.Platform,
+		Name:      name,
+		Notes:     notes,
+		Platform:  defaults.Platform,
 		Workflows: defaults.Workflows,
-		Agents:   defaults.Agents,
-		Skills:   defaults.Skills,
-		Rules:    defaults.Rules,
+		Agents:    defaults.Agents,
+		Skills:    defaults.Skills,
+		Rules:     defaults.Rules,
 	}
 	if err := workspace.Save(path, m); err != nil {
 		return workspace.Manifest{}, err

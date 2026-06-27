@@ -1,6 +1,7 @@
 # Example workspace manifest — copy to switchic.workspace.yaml in the parent
 # directory of your repos, then run `switchic switch claude` from there.
 name: billing-workspace
+notes: Billing platform — API, web dashboard, and shared contracts.
 platform: claude
 workflow: coding
 
@@ -9,6 +10,9 @@ repos:
     path: ../billing-api
     role: backend
     notes: REST API, owns user accounts and invoicing
+    # context_file: optional — overrides the platform default (CLAUDE.md / AGENTS.md).
+    # Use when the repo's context lives at a non-standard path, e.g.:
+    # context_file: ../billing-api/docs/CLAUDE.md
   - name: billing-web
     path: ../billing-web
     role: frontend
@@ -17,6 +21,7 @@ repos:
     path: ../billing-contracts
     role: contracts
     notes: Shared OpenAPI specs + generated client SDKs
+    context_file: ../billing-contracts/docs/AGENTS.md
 
 agents:
   active:
