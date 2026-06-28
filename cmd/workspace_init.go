@@ -12,7 +12,10 @@ import (
 	"github.com/Dandi-Pangestu/switchic/internal/util"
 )
 
-var workspaceInitName string
+var (
+	workspaceInitName  string
+	workspaceInitNotes string
+)
 
 var workspaceInitCmd = &cobra.Command{
 	Use:   "init",
@@ -23,7 +26,7 @@ var workspaceInitCmd = &cobra.Command{
 		if name == "" {
 			name = filepath.Base(cwd)
 		}
-		m, err := project.InitWorkspace(cwd, name)
+		m, err := project.InitWorkspace(cwd, name, workspaceInitNotes)
 		if err != nil {
 			if errors.Is(err, util.ErrAlreadyExists) {
 				return fmt.Errorf("switchic.workspace.yaml already exists in %s", cwd)
@@ -38,5 +41,6 @@ var workspaceInitCmd = &cobra.Command{
 
 func init() {
 	workspaceInitCmd.Flags().StringVar(&workspaceInitName, "name", "", "workspace name (defaults to directory name)")
+	workspaceInitCmd.Flags().StringVar(&workspaceInitNotes, "notes", "", "short description of this workspace")
 	workspaceCmd.AddCommand(workspaceInitCmd)
 }

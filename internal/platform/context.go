@@ -31,6 +31,9 @@ func buildContextBody(ctx Context) string {
 				fmt.Fprintf(&b, ": %s", r.Notes)
 			}
 			b.WriteString("\n")
+			if r.ContextFile != "" {
+				fmt.Fprintf(&b, "  Project context: `%s`\n", r.ContextFile)
+			}
 		}
 		b.WriteString("\n")
 	} else {

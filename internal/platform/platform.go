@@ -29,6 +29,11 @@ type Context struct {
 	// IsWorkspace is true when generating for a multi-repo workspace.
 	IsWorkspace bool
 
+	// Replace, when true, forces overwrite of the main context file (CLAUDE.md /
+	// AGENTS.md) even if it has no switchic banner (i.e. is user-written).
+	// Corresponds to the --replace CLI flag.
+	Replace bool
+
 	// Resolved component lists — the adapter should write only these.
 	Workflows []workflow.Workflow
 	Agents    []agent.Definition

@@ -6,10 +6,11 @@ import "github.com/Dandi-Pangestu/switchic/internal/config"
 
 // Repo describes one repository inside a workspace.
 type Repo struct {
-	Name  string `yaml:"name"`
-	Path  string `yaml:"path"`
-	Role  string `yaml:"role,omitempty"`
-	Notes string `yaml:"notes,omitempty"`
+	Name        string `yaml:"name"`
+	Path        string `yaml:"path"`
+	Role        string `yaml:"role,omitempty"`
+	Notes       string `yaml:"notes,omitempty"`
+	ContextFile string `yaml:"context_file,omitempty"`
 }
 
 // Manifest is the switchic.workspace.yaml shape. Active component lists may

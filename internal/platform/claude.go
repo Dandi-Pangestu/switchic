@@ -32,6 +32,9 @@ func (Claude) Generate(ctx Context) ([]string, error) {
 	var written []string
 
 	mainPath := filepath.Join(ctx.Root, "CLAUDE.md")
+	if !ctx.Replace && util.FileExists(mainPath) && !util.HasSwitchicBanner(mainPath) {
+		mainPath = filepath.Join(ctx.Root, "CLAUDE.local.md")
+	}
 	mainContent := buildMainContext(ctx)
 	if err := util.WriteFile(mainPath, []byte(mainContent)); err != nil {
 		return nil, util.Wrap(err, "write %s", mainPath)

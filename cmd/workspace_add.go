@@ -11,7 +11,11 @@ import (
 	"github.com/Dandi-Pangestu/switchic/internal/workspace"
 )
 
-var workspaceAddRole string
+var (
+	workspaceAddRole        string
+	workspaceAddNotes       string
+	workspaceAddContextFile string
+)
 
 var workspaceAddCmd = &cobra.Command{
 	Use:   "add <repo-path>",
@@ -26,7 +30,7 @@ var workspaceAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := m.AddRepo(args[0], workspaceAddRole); err != nil {
+		if err := m.AddRepo(args[0], workspaceAddRole, workspaceAddNotes, workspaceAddContextFile); err != nil {
 			if errors.Is(err, util.ErrAlreadyExists) {
 				return fmt.Errorf("a repo with that name is already in the workspace")
 			}
@@ -45,5 +49,7 @@ var workspaceAddCmd = &cobra.Command{
 
 func init() {
 	workspaceAddCmd.Flags().StringVar(&workspaceAddRole, "role", "", "role label (e.g. backend, frontend, contracts)")
+	workspaceAddCmd.Flags().StringVar(&workspaceAddNotes, "notes", "", "short description of this repo")
+	workspaceAddCmd.Flags().StringVar(&workspaceAddContextFile, "context-file", "", "path to this repo's context file, relative to workspace root (overrides platform default, e.g. ../hub_core/docs/CLAUDE.md)")
 	workspaceCmd.AddCommand(workspaceAddCmd)
 }
