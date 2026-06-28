@@ -27,6 +27,7 @@ switchic status                # see active components and token cost
 - [Quickstart](#quickstart)
   - [Generated files: commit or ignore?](#generated-files-commit-or-ignore)
   - [Speed up setup with built-in skills](#speed-up-setup-with-built-in-skills)
+  - [Multi-repo workspace](#multi-repo-workspace)
 - [Commands](#commands)
 - [Bundled Library](#bundled-library)
 - [User-Defined Assets](#user-defined-assets)
@@ -268,25 +269,46 @@ enable it with `switchic add`.
 
 ---
 
-### Multi-repo workspace *(coming soon)*
+### Multi-repo workspace
 
-> Workspace commands are not yet released. Running any `switchic workspace` subcommand will print an error and exit.
-
-Once released, the workflow will look like this:
+Workspace mode lets you manage AI context across multiple repos from a single manifest. The generated context file includes a structured summary of all repos — names, roles, and notes — so the AI understands the full system without ingesting raw code from every repo.
 
 ```bash
 mkdir my-workspace && cd my-workspace
 
-switchic workspace init --name billing-workspace
-switchic workspace add ../billing-api      --role backend
-switchic workspace add ../billing-web      --role frontend
-switchic workspace add ../billing-contracts --role contracts
+# 1. Create the workspace manifest
+switchic workspace init --name billing-workspace --notes "Billing platform — API, web, contracts"
+
+# 2. Register repos
+switchic workspace add ../billing-api      --role backend  --notes "REST API, owns invoicing"
+switchic workspace add ../billing-web      --role frontend --notes "Customer-facing dashboard (React)"
+switchic workspace add ../billing-contracts --role contracts --notes "Shared OpenAPI specs"
+
+# 3. Check what's registered
 switchic workspace list
 
-switchic switch claude   # CLAUDE.md now includes a workspace-level summary
+# 4. Generate platform files — workspace context is included automatically
+switchic switch claude   # or: kiro / github-copilot
 ```
 
-In workspace mode, the generated `CLAUDE.md` includes a structured summary of all repos (names, roles, notes) so the AI understands the full system without ingesting raw code from every repo.
+**Workspace-level component overrides** — `add` and `remove` write to the workspace manifest when run from a workspace, overriding the per-repo config:
+
+```bash
+switchic add agent code-reviewer
+switchic remove skill jira-ticket-description
+```
+
+**Custom context file per repo** — if a repo's context lives at a non-standard path, point to it explicitly:
+
+```bash
+switchic workspace add ../billing-api --context-file ../billing-api/docs/CLAUDE.md
+```
+
+**Remove a repo:**
+
+```bash
+switchic workspace remove billing-contracts
+```
 
 ---
 
@@ -304,10 +326,11 @@ In workspace mode, the generated `CLAUDE.md` includes a structured summary of al
 | `remove agent <name>` | Disable an agent |
 | `remove skill <name>` | Disable a skill |
 | `remove rule <name>` | Disable a rule |
-| `workspace init` | *(coming soon)* Create `switchic.workspace.yaml` |
-| `workspace add <path>` | *(coming soon)* Register a repo in the workspace |
-| `workspace remove <name>` | *(coming soon)* Unregister a repo |
-| `workspace list` | *(coming soon)* List registered repos |
+| `workspace init` | Create `switchic.workspace.yaml` in the current directory |
+| `workspace init --name <n> --notes <n>` | Create workspace with a custom name and description |
+| `workspace add <path>` | Register a repo; accepts `--role`, `--notes`, `--context-file` |
+| `workspace remove <name>` | Unregister a repo from the workspace |
+| `workspace list` | List registered repos and warn about any missing on disk |
 | `version` | Print the binary version |
 
 ---
@@ -499,23 +522,50 @@ rules:
 
 Fields omitted from `switchic init` output are optional — add them as your project grows.
 
-### `switchic.workspace.yaml` (multi-repo) *(coming soon)*
+### `switchic.workspace.yaml` (multi-repo)
 
-Created by `switchic workspace init`.
+Created by `switchic workspace init`. Place this file in a parent directory that sits alongside your repos.
 
 ```yaml
 name: billing-workspace
-platform: claude
+notes: Billing platform — API, web dashboard, and shared contracts.
+platform: claude           # target platform for all repos in this workspace
+
+# Optional: workspace-level component overrides.
+# When set, these take priority over any per-repo .switchic/config.yaml values.
+agents:
+  active:
+    - code-reviewer
+
+skills:
+  active:
+    - implementation-plan
+
+rules:
+  active:
+    - golang
+
 repos:
   - name: billing-api
-    path: ../billing-api
-    role: backend
+    path: ../billing-api   # relative to this workspace file
+    role: backend          # optional label — appears in the generated context summary
+    notes: REST API, owns user accounts and invoicing
+
   - name: billing-web
     path: ../billing-web
     role: frontend
+    notes: Customer-facing dashboard (React)
+
+  - name: billing-contracts
+    path: ../billing-contracts
+    role: contracts
+    notes: Shared OpenAPI specs + generated client SDKs
+    # context_file: path to this repo's context file relative to workspace root.
+    # Use when the file lives at a non-standard path.
+    context_file: ../billing-contracts/docs/AGENTS.md
 ```
 
-See `examples/` for fully-populated samples.
+See `examples/multi-repo/` for a fully-populated sample.
 
 ---
 
@@ -540,7 +590,7 @@ switchic switch claude
 
 **Workflow presets help here** — instead of manually toggling agents and skills for different task types, define a workflow that bundles the right set. Switch workflows when you switch task types.
 
-In workspace mode *(coming soon)*, the generated `CLAUDE.md` will contain only a structured summary of repos (names, roles, notes) rather than any file contents — keeping multi-repo sessions affordable.
+In workspace mode, the generated `CLAUDE.md` contains only a structured summary of repos (names, roles, notes) rather than any file contents — keeping multi-repo sessions affordable.
 
 ---
 
@@ -573,7 +623,6 @@ Generation is **deterministic** — the same config and filesystem state always 
 
 ### Coming soon
 
-- **Workspace support** — multi-repo context (`switchic workspace init/add/remove/list`)
 - **Cursor adapter** — generate `.cursorrules` and Cursor agent files
 - **Codex CLI adapter** — generate `AGENTS.md`
 - **Windsurf adapter** — generate Windsurf rules
