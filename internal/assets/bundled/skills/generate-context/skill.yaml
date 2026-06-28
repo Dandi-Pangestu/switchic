@@ -154,6 +154,56 @@ prompt: |
     - path: README.md
       reason: project overview
 
+  ## YAML safety — apply before writing ANY list item
+
+  List items in `conventions`, `dos`, `donts`, and `stack` are plain YAML strings.
+  The go-yaml parser that reads this file raises a hard parse error (not just a
+  type-conversion error) if an unquoted string contains any of:
+
+  | Pattern | Why it breaks |
+  |---------|---------------|
+  | `[` or `]` | go-yaml terminates the plain scalar at `[` and tries to parse the rest as a flow sequence; the orphan text errors |
+  | `{` or `}` | same — flow mapping indicator |
+  | `: ` (colon + space) | YAML mapping value indicator; the parser splits the string into a key and value; if the value also contains `: ` the nesting errors with "mapping values are not allowed in this context" |
+  | Leading `#` | treated as a YAML comment |
+
+  **Decision tree — for every list item string before you write it:**
+
+  1. Does the string contain `[`, `]`, `{`, `}`, `: ` (colon-space), or start with `#`?
+     - NO → write it as-is (plain scalar).
+     - YES → it MUST be quoted. Continue to step 2.
+  2. Does the string contain a single-quote character `'`?
+     - NO → wrap in single quotes: `- 'the string'`
+     - YES → wrap in double quotes and escape every `"` inside as `\"`: `- "the string"`
+
+  Worked examples (these MUST be quoted):
+
+    Wrong:   - params[:organization_id] must be set
+    Correct: - 'params[:organization_id] must be set'
+
+    Wrong:   - Return { "status": "success", "data": ... }
+    Correct: - 'Return { "status": "success", "data": ... }'
+
+    Wrong:   - Use interact_with(Interactor, error_code: 422) as the call pattern
+    Correct: - 'Use interact_with(Interactor, error_code: 422) as the call pattern'
+
+    Wrong:   - present() always uses response: key — never data: key
+    Correct: - 'present() always uses response: key — never data: key'
+
+    Wrong:   - Don't use data: key
+    Correct: - "Don't use data: key"
+
+    Wrong:   - Don't use "code": "success" — always "status": "success"
+    Correct: - "Don't use \"code\": \"success\" — always \"status\": \"success\""
+
+  Strings that do NOT need quoting (no special characters):
+    - All HTTP endpoints are Grape resources
+    - Put business logic in hub_core, not hub_service
+    - Write table-driven tests with t.Run()
+
+  Apply this same decision tree to `structure` map values — if a value contains
+  `: ` or `{` or `[`, wrap it in quotes using the same rule above.
+
   ## Step 4 — Write back to .switchic/config.yaml
 
   Use the Edit tool to update .switchic/config.yaml:
