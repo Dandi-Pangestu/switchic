@@ -1,5 +1,5 @@
 name: skill-import
-description: Convert a SKILL.md from any AI coding tool (Claude Code, Cursor, GitHub Copilot, Windsurf) into a switchic-compatible YAML skill definition. Use when the user wants to migrate or reuse an existing skill inside switchic.
+description: Convert a SKILL.md from any AI coding tool (Claude Code, Cursor, GitHub Copilot, Windsurf) into a switchic-compatible YAML skill definition, carrying over any sibling reference files and folders. Use when the user wants to migrate or reuse an existing skill inside switchic.
 
 claude:
   argument-hint: "<skill-file-path> [output-path]"
@@ -24,8 +24,10 @@ prompt: |
   4. **Map to switchic schema** (see Target Schema below).
   5. **Write the output** to the path the user specified, or default to `./skill.yaml` in the
      current directory if no output path was given.
-  6. **Report** — after writing, print a one-paragraph summary: source platform detected, fields
-     mapped, output path, and any fields that had to be inferred, dropped, or left blank.
+  6. **Copy sibling files and folders** — see "Sibling files and folders" below.
+  7. **Report** — after writing, print a one-paragraph summary: source platform detected, fields
+     mapped, output path, sibling files/folders copied (if any), and any fields that had to be
+     inferred, dropped, or left blank.
 
   ## Target Schema
 
@@ -73,6 +75,31 @@ prompt: |
 
   Warn the user before overwriting an existing file at the target path. If overwriting, ask for
   confirmation unless the user has already said "yes" or "overwrite".
+
+  ## Sibling files and folders
+
+  Many skills are more than one file: `SKILL.md` links to reference docs sitting next to it
+  (e.g. `templates.md`, `checklist.md`, `examples/`). switchic's skill loader supports this
+  natively — anything placed alongside `skill.yaml` in a folder-based skill is picked up as an
+  embedded file and shipped verbatim to every platform on `switch`. Carry those files over so
+  the imported skill stays self-contained.
+
+  1. List the source `SKILL.md`'s directory. Every other entry in it — files and folders alike
+     — is a sibling to copy, except `SKILL.md` itself.
+  2. Skip VCS/editor cruft that isn't part of the skill: `.git`, `.DS_Store`, editor swap files.
+     Copy everything else, including files the prompt body doesn't explicitly link to — do not
+     try to guess relevance from the prompt text.
+  3. Copy each sibling recursively, preserving its relative path and directory structure, into
+     the same directory that holds the output `skill.yaml` (not the current working directory —
+     if the resolved output path is `./foo/skill.yaml`, siblings land under `./foo/`).
+  4. Preserve file contents byte-for-byte — no reformatting, no frontmatter stripping. Only
+     `SKILL.md`'s own content goes through the field-mapping/cleanup rules; siblings do not.
+  5. If a sibling's destination path already exists, treat it the same as overwriting the output
+     `skill.yaml`: warn and ask for confirmation unless the user already said "yes" or
+     "overwrite".
+  6. If the source has no siblings (a lone `SKILL.md`, or the input was pasted text with no
+     backing directory), skip this step silently — do not report "0 files copied" as if it were
+     notable.
 
   ## Multi-skill files
 

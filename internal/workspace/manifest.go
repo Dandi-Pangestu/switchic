@@ -16,12 +16,13 @@ type Repo struct {
 // Manifest is the switchic.workspace.yaml shape. Active component lists may
 // be inherited from a project config; when present here they take priority.
 type Manifest struct {
-	Name     string             `yaml:"name"`
-	Platform string             `yaml:"platform"`
+	Name      string            `yaml:"name"`
+	Platform  string            `yaml:"platform"`
 	Workflows config.ActiveList `yaml:"workflows,omitempty"`
-	Repos    []Repo             `yaml:"repos"`
-	Agents   config.ActiveList  `yaml:"agents,omitempty"`
-	Skills   config.ActiveList  `yaml:"skills,omitempty"`
-	Rules    config.ActiveList  `yaml:"rules,omitempty"`
-	Notes    string             `yaml:"notes,omitempty"`
+	Repos     []Repo            `yaml:"repos"`
+	Agents    config.ActiveList `yaml:"agents,omitempty"`
+	Skills    config.ActiveList `yaml:"skills,omitempty"`
+	Rules     config.ActiveList `yaml:"rules,omitempty"`
+	Docs      []config.DocRef   `yaml:"docs,omitempty"`
+	Notes     string            `yaml:"notes,omitempty"`
 }

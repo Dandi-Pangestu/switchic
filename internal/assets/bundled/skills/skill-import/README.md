@@ -82,6 +82,15 @@ prompt: |
 Only fields present in the source are carried over. Platform-specific fields (`paths`,
 `when_to_use`, `license`, `metadata`) are handled per the rules in `formats.md`.
 
+## Sibling files and folders
+
+If the source `SKILL.md` has other files or folders next to it (reference docs, templates,
+`examples/`, etc.), they are copied alongside the generated `skill.yaml`, preserving their
+relative paths and contents unchanged. switchic's skill loader picks up anything sitting next
+to a `skill.yaml` automatically, so the imported skill ships with its full reference set on
+every platform. VCS/editor cruft (`.git`, `.DS_Store`) is skipped; everything else is copied
+regardless of whether the prompt body links to it.
+
 ## Multi-skill files
 
 If the source file contains multiple skill blocks, the skill will ask whether to combine them

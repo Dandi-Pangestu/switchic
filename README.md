@@ -545,6 +545,14 @@ rules:
   active:
     - golang
 
+# Optional: reference docs shared across the whole workspace. Paths are
+# relative to the workspace root. The "when" field scopes the @-mention to a
+# specific trigger so the AI only loads the doc when it is relevant.
+docs:
+  - path: docs/architecture.md
+    when: understanding how the repos fit together
+  - path: README.md
+
 repos:
   - name: billing-api
     path: ../billing-api   # relative to this workspace file
