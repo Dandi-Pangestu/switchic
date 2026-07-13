@@ -34,6 +34,9 @@ var workspaceRemoveCmd = &cobra.Command{
 			return err
 		}
 		output.Info(cmd.OutOrStdout(), "Removed repo %q from workspace %q", args[0], m.Name)
+		if err := workspace.UnlinkRepo(root, args[0]); err != nil {
+			output.Info(cmd.OutOrStdout(), "Warning: could not remove repos/ symlink: %v", err)
+		}
 		return nil
 	},
 }
