@@ -5,18 +5,49 @@ description: |
 prompt: |
   To produce a high-quality code review summary:
 
+  ## Document contract (required)
+
+  Every review summary MUST begin with YAML frontmatter so that orchestrating agents can gate
+  on the verdict without interpreting prose:
+
+  ```
+  ---
+  ticket: <JIRA_KEY>
+  verdict: needs_revision   # approved | needs_revision
+  iteration: 1              # increment on every review cycle
+  reviewed_at: <ISO 8601 UTC timestamp>
+  ---
+  ```
+
+  Rules:
+  - `verdict: approved` only when ALL acceptance criteria are met and no issues are flagged.
+  - Increment `iteration` on every implement→review cycle for the same ticket.
+  - Do NOT overwrite previous iterations' findings: keep the frontmatter and current review at
+    the top of the file, and preserve prior reviews under a `## Review History` section
+    (most recent first), so the revision trail survives the loop.
+
+  ## Structure
+
   1. Use clear sections and structure to organize findings (e.g., Review Status, Acceptance Criteria Checklist, Code Quality Issues, Test Coverage, Scope Assessment, Flagged Issues, Recommendations).
-  2. Provide a clear approval status (Approved / Needs Revision).
+  2. Provide a clear approval status (Approved / Needs Revision) matching the frontmatter verdict.
   3. Check each acceptance criterion from the Jira ticket and mark as ✓ (met) or ✗ (not met).
   4. Identify and list any code quality issues, missing test coverage, or architectural concerns.
   5. Assess whether changes are in-scope or out-of-scope relative to the Jira requirements.
-  6. Provide specific, actionable feedback for any flagged issues.
+  6. Provide specific, actionable feedback for any flagged issues — name the file and location so the implementer can act without searching.
   7. Format for easy consumption by engineers and stakeholders.
 
   Example structure:
 
+  ```
+  ---
+  ticket: QC-12345
+  verdict: needs_revision
+  iteration: 2
+  reviewed_at: 2026-01-01T00:00:00Z
+  ---
+
   ## Review Status
-  **Status:** [Approved / Needs Revision]
+  **Status:** Needs Revision
 
   ## Acceptance Criteria Checklist
   - ✓ Criterion 1
@@ -24,11 +55,11 @@ prompt: |
   - ✗ Criterion 3 (Reason)
 
   ## Code Quality
-  - Issue 1: Description
-  - Issue 2: Description
+  - Issue 1: Description (file/location)
+  - Issue 2: Description (file/location)
 
   ## Test Coverage
-  - All RSpec tests passing: [Yes/No]
+  - Project test suite passing: [Yes/No]
   - New tests added: [Yes/No]
   - Coverage: [Details]
 
@@ -42,5 +73,10 @@ prompt: |
 
   ## Recommendations
   - [Optional recommendations for future improvements]
+
+  ## Review History
+  ### Iteration 1 — needs_revision (2026-01-01T00:00:00Z)
+  - [Condensed summary of prior findings and whether each was resolved]
+  ```
 
   Use this skill to document code reviews comprehensively. Output must be structured, professional, and actionable for implementers and stakeholders.

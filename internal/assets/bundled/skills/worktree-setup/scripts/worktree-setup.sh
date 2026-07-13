@@ -2,26 +2,30 @@
 # worktree-setup.sh
 # Provisions a new git worktree for a parallel agent session.
 #
-# Usage: worktree-setup.sh <JIRA_KEY> <JIRA_TITLE_SLUG> <REPO_ROOT>
+# Usage: worktree-setup.sh <JIRA_KEY> <JIRA_TITLE_SLUG> <REPO_ROOT> [BASE_BRANCH]
 #
 # Arguments:
 #   JIRA_KEY        - Jira ticket key, e.g. QC-99999
 #   JIRA_TITLE_SLUG - Lowercase hyphenated title slug, max 6 words, e.g. fix-nil-message-send
 #   REPO_ROOT       - Absolute path to the repository root
+#   BASE_BRANCH     - Branch to base the feature branch on (default: production)
 #
 # Stdout (parsed by the invoking agent):
 #   WORKTREE_PATH=<absolute path>
 #   BRANCH_NAME=<branch name>
+#   BASE_BRANCH=<base branch used>
 
 set -euo pipefail
 
 JIRA_KEY="${1:?JIRA_KEY is required}"
 JIRA_TITLE_SLUG="${2:?JIRA_TITLE_SLUG is required}"
 REPO_ROOT="${3:?REPO_ROOT is required}"
+BASE_BRANCH="${4:-production}"
 
+REPO_NAME="$(basename "$REPO_ROOT")"
 BRANCH_NAME="feature/${JIRA_KEY}-${JIRA_TITLE_SLUG}"
-WORKTREE_PATH="${REPO_ROOT}/../hub_core-session-${JIRA_KEY}"
-REGISTRY="${REPO_ROOT}/.github/sessions/registry.json"
+WORKTREE_PATH="${REPO_ROOT}/../${REPO_NAME}-session-${JIRA_KEY}"
+REGISTRY="${REPO_ROOT}/sessions/registry.json"
 STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 if ! command -v jq &>/dev/null; then
@@ -29,11 +33,16 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-echo "Pulling latest production..."
-git -C "$REPO_ROOT" pull origin production
+if [[ ! -f "$REGISTRY" ]]; then
+  mkdir -p "$(dirname "$REGISTRY")"
+  echo "[]" > "$REGISTRY"
+fi
+
+echo "Pulling latest ${BASE_BRANCH}..."
+git -C "$REPO_ROOT" fetch origin "$BASE_BRANCH"
 
 echo "Creating worktree at ${WORKTREE_PATH} on branch ${BRANCH_NAME}..."
-git -C "$REPO_ROOT" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" production
+git -C "$REPO_ROOT" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" "origin/${BASE_BRANCH}"
 
 ABSOLUTE_WORKTREE_PATH="$(cd "$WORKTREE_PATH" && pwd)"
 
@@ -42,11 +51,13 @@ NEW_ENTRY=$(jq -n \
   --arg jira_key "$JIRA_KEY" \
   --arg branch "$BRANCH_NAME" \
   --arg worktree_path "$ABSOLUTE_WORKTREE_PATH" \
+  --arg base_branch "$BASE_BRANCH" \
   --arg started_at "$STARTED_AT" \
-  '{jira_key: $jira_key, branch: $branch, worktree_path: $worktree_path, status: "active", started_at: $started_at}')
+  '{jira_key: $jira_key, branch: $branch, worktree_path: $worktree_path, base_branch: $base_branch, status: "active", started_at: $started_at}')
 
 jq --argjson entry "$NEW_ENTRY" '. += [$entry]' "$REGISTRY" > "${REGISTRY}.tmp" \
   && mv "${REGISTRY}.tmp" "$REGISTRY"
 
 echo "WORKTREE_PATH=${ABSOLUTE_WORKTREE_PATH}"
 echo "BRANCH_NAME=${BRANCH_NAME}"
+echo "BASE_BRANCH=${BASE_BRANCH}"

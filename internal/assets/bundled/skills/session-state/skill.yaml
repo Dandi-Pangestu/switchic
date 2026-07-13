@@ -1,0 +1,62 @@
+name: session-state
+description: |
+  Defines the per-ticket workflow state file contract at generated-docs/<JIRA_KEY>/state.yaml;
+  use when orchestrating a coding workflow to record phase transitions, resume interrupted
+  sessions, and check on disk what work is already done before delegating.
+prompt: |
+  The workflow state for a ticket lives on disk, not in conversation memory. This makes
+  sessions resumable and lets partial runs skip work that is already done.
+
+  ## Location
+
+  `generated-docs/<JIRA_KEY>/state.yaml` in the **primary workspace root** (never inside a
+  worktree — state must be visible from all sessions).
+
+  ## Schema
+
+  ```yaml
+  ticket: QC-12345
+  phase: planned            # see lifecycle below
+  base_branch: production
+  branch_name: feature/QC-12345-fix-nil-message-send
+  worktree_path: /abs/path/to/session/root   # equals repo root for the primary session
+  plan:
+    path: generated-docs/QC-12345/implementation-plan.md
+    status: draft           # draft | approved — mirrors the plan file's frontmatter
+    revision: 1
+  review:
+    iteration: 0            # number of completed implement→review cycles
+    verdict: null           # null | approved | needs_revision — mirrors review-summary frontmatter
+  updated_at: 2026-01-01T00:00:00Z
+  ```
+
+  ## Phase lifecycle
+
+  `context` → `planned` → `approved` → `implemented` → `reviewed` → `done`
+
+  - `context` — requirements fetched; session may or may not be bootstrapped yet
+  - `planned` — implementation plan written, awaiting human approval
+  - `approved` — human approved the plan; implementation may start
+  - `implemented` — code written, awaiting review (or re-review after revisions)
+  - `reviewed` — reviewer returned `approved`
+  - `done` — session closed (registry updated, worktree cleaned up if parallel)
+
+  A revision loop moves `implemented` → back to `implemented` with `review.iteration`
+  incremented and `review.verdict: needs_revision` recorded in between.
+
+  ## Rules
+
+  1. **The orchestrating agent owns all writes** to `state.yaml`. Specialist agents read it
+     (or receive its values as inputs) but never modify it.
+  2. Update the file at every phase transition, plan revision, and review verdict — in the
+     same turn the event happens, not at the end of the workflow.
+  3. On any request for a ticket, read `state.yaml` FIRST. If present, trust it over
+     conversation memory and resume from the recorded phase.
+  4. If `state.yaml` is missing but artifacts exist, reconstruct conservatively:
+     - `implementation-plan.md` with frontmatter `status: approved` → phase `approved`
+     - `implementation-plan.md` with `status: draft` (or no frontmatter) → phase `planned`
+     - `review-summary.md` with `verdict: approved` → phase `reviewed`
+     Then write the reconstructed `state.yaml` before proceeding.
+  5. `plan.status` and `review.verdict` must mirror the frontmatter of the artifact files;
+     the artifact frontmatter is authoritative if they ever disagree.
+  6. Write atomically where possible (write then rename) and keep the file valid YAML.

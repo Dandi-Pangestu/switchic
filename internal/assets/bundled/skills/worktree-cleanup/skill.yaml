@@ -13,7 +13,7 @@ prompt: |
 
   ## Steps
 
-  1. Locate the script at `<SKILL_DIR>/scripts/worktree-cleanup.sh` where `<SKILL_DIR>` is the directory containing this SKILL.md file.
+  1. Locate the script at `<SKILL_DIR>/scripts/worktree-cleanup.sh` where `<SKILL_DIR>` is the directory containing this skill definition.
 
   2. Ensure the script is executable:
      ```
@@ -30,6 +30,11 @@ prompt: |
   ## Output
 
   - A confirmation message that the worktree was removed and the registry entry deleted.
+
+  ## Notes
+
+  - The session registry lives at `<REPO_ROOT>/sessions/registry.json`.
+  - If the session's `worktree_path` equals `REPO_ROOT` (primary session), the script only deregisters the session — it never removes the repository root.
 
   ## Error Handling
 

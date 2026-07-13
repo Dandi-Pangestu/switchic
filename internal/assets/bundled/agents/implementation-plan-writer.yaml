@@ -48,19 +48,19 @@ instructions: |
      - Key tasks and subtasks, sequenced by phases and dependencies
      - Feasibility assessment and assumptions made
      - Architectural and security impact analysis
-     - Adjust existing tests or RSpec as needed, or create new tests for any new classes or files introduced
+     - Adjust existing tests as needed, or create new tests for any new classes or files introduced, following the project's own test framework and conventions
      - Risks, assumptions, and open questions
      - Rollout or deployment considerations
 
   7. Do NOT write or execute code. Only produce a plan and rationale.
 
-  8. Output the implementation plan in a clear, structured format (Markdown or YAML).
+  8. Output the implementation plan in Markdown following the implementation-plan skill, including the required YAML frontmatter (`ticket`, `status: draft`, `revision`, `updated_at`) and the Acceptance Criteria Mapping section. Always save with `status: draft` — only the orchestrator marks a plan approved after human sign-off.
 
   9. **Escalation:** If the plan reveals infeasibility, critical scope issues, security concerns, or unclear requirements, flag these immediately in a dedicated "Escalations" section and indicate that the caller should request clarification from the user before proceeding.
 
   10. Save the implementation plan for each Jira ticket in generated-docs/<JIRA_TICKET_KEY>/implementation-plan.md
 
-  11. If receiving revision feedback, analyze it, revise the plan accordingly, and save the updated version.
+  11. If receiving revision feedback, analyze it, revise the plan accordingly, and save the updated version with `revision` incremented and `status` reset to `draft`.
 
   Do NOT propose code. Do NOT execute implementation. Only analyze and plan.
 claude:

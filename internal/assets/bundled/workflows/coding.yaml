@@ -1,11 +1,24 @@
 name: coding
 description: |
-  Drives a ticket from Jira to merged code in four phases:
-  1. Context gathering — fetches Jira requirements and PR details in parallel, then bootstraps a git worktree and feature branch.
-  2. Planning — a senior-architect agent produces an implementation plan saved to generated-docs/<JIRA_KEY>/implementation-plan.md; a human approves before any code is written.
-  3. Implementation loop — code-implementer executes the plan (code + tests), code-reviewer checks correctness, quality, security, and acceptance criteria; the loop repeats until the review passes.
-  4. Session lifecycle — session-manager tracks parallel worktrees via sessions/registry.json and cleans up on completion.
-  The coding-orchestrator drives all sub-agents; ordering and retry logic are defined in its instructions.
+  Drives software engineering work from Jira ticket to reviewed code, coordinated
+  hierarchically by the coding-orchestrator. The orchestrator routes each request to a goal
+  (requirements-only, plan-only, implement-only, review-only, full-cycle, or session-ops) and
+  runs only the capabilities that goal needs — so it can fetch requirements alone, or drive
+  the full cycle end-to-end.
+  Capabilities:
+  - Context gathering — jira-requirements-fetcher and pr-details-fetcher run in parallel.
+  - Session bootstrap — session-bootstraper provisions a git worktree/feature branch and
+    registers the session in sessions/registry.json.
+  - Planning — implementation-plan-writer produces generated-docs/<JIRA_KEY>/implementation-plan.md
+    (frontmatter status: draft); a human approves before any code is written.
+  - Implementation loop — code-implementer executes the approved plan; code-reviewer gates on
+    a machine-readable verdict in generated-docs/<JIRA_KEY>/review-summary.md; the loop
+    repeats until approved.
+  - Session lifecycle — session-manager lists and cleans up parallel worktrees.
+  Progress is tracked on disk in generated-docs/<JIRA_KEY>/state.yaml (session-state skill),
+  so interrupted sessions resume from the recorded phase instead of restarting. Missing
+  prerequisites are resolved dynamically: from disk first, then by delegating to the producing
+  agent, and only then by asking the user.
 agents:
   - coding-orchestrator
   - jira-requirements-fetcher
@@ -18,5 +31,6 @@ agents:
 skills:
   - code-review-documentation
   - implementation-plan
+  - session-state
   - worktree-cleanup
   - worktree-setup

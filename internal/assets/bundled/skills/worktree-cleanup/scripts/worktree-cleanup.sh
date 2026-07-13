@@ -13,7 +13,7 @@ set -euo pipefail
 JIRA_KEY="${1:?JIRA_KEY is required}"
 REPO_ROOT="${2:?REPO_ROOT is required}"
 
-REGISTRY="${REPO_ROOT}/.github/sessions/registry.json"
+REGISTRY="${REPO_ROOT}/sessions/registry.json"
 
 if ! command -v jq &>/dev/null; then
   echo "ERROR: jq is required but not installed. Install via: brew install jq" >&2
@@ -26,20 +26,28 @@ if [[ ! -f "$REGISTRY" ]]; then
 fi
 
 WORKTREE_PATH=$(jq -r --arg key "$JIRA_KEY" \
-  '.[] | select(.jira_key == $key) | .worktree_path' "$REGISTRY")
+  '[.[] | select(.jira_key == $key) | .worktree_path][0] // empty' "$REGISTRY")
 
 if [[ -z "$WORKTREE_PATH" ]]; then
   echo "ERROR: No session found for ${JIRA_KEY} in registry." >&2
   exit 1
 fi
 
-echo "Removing worktree at ${WORKTREE_PATH}..."
-if [[ -d "$WORKTREE_PATH" ]]; then
-  git -C "$REPO_ROOT" worktree remove "$WORKTREE_PATH" --force
-  echo "Worktree removed."
+ABSOLUTE_REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
+
+if [[ "$WORKTREE_PATH" == "$ABSOLUTE_REPO_ROOT" ]]; then
+  # Primary session: the "worktree" is the repository root itself. Never remove it —
+  # only deregister the session.
+  echo "Session ${JIRA_KEY} is the primary session (worktree is the repo root). Skipping worktree removal."
 else
-  echo "Worktree directory not found on disk — pruning stale entry."
-  git -C "$REPO_ROOT" worktree prune
+  echo "Removing worktree at ${WORKTREE_PATH}..."
+  if [[ -d "$WORKTREE_PATH" ]]; then
+    git -C "$REPO_ROOT" worktree remove "$WORKTREE_PATH" --force
+    echo "Worktree removed."
+  else
+    echo "Worktree directory not found on disk — pruning stale entry."
+    git -C "$REPO_ROOT" worktree prune
+  fi
 fi
 
 echo "Removing registry entry for ${JIRA_KEY}..."

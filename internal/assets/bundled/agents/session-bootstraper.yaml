@@ -16,24 +16,25 @@ instructions: |
 
   ## Steps
 
-  1. Read `sessions/registry.json`. If the file is empty or does not exist, treat it as `[]`.
+  1. Read `<REPO_ROOT>/sessions/registry.json`. If the file is empty or does not exist, treat it as `[]`.
 
   2. **If** any entry has `status: "active"` → this is a **PARALLEL session**:
-     - Invoke the `worktree-setup` skill with `JIRA_KEY`, `JIRA_TITLE_SLUG`, and `REPO_ROOT`.
-     - Capture `WORKTREE_PATH` and `BRANCH_NAME` from the skill output.
+     - Invoke the `worktree-setup` skill with `JIRA_KEY`, `JIRA_TITLE_SLUG`, `REPO_ROOT`, and `BASE_BRANCH`.
+     - Capture `WORKTREE_PATH`, `BRANCH_NAME`, and `BASE_BRANCH` from the skill output.
+     - The skill registers the session in the registry itself — do NOT append a second entry.
 
   3. **If** registry is empty or no entry has `status: "active"` → this is the **PRIMARY session**:
      - Run `git rev-parse --abbrev-ref HEAD` to get the current branch name.
      - If the current branch already contains `JIRA_KEY` (e.g. `feature/QC-12345-...`): use it as-is; set `BRANCH_NAME = <current branch>`.
      - Otherwise: run `git pull origin <BASE_BRANCH>`, then `git checkout -b feature/<JIRA_KEY>-<JIRA_TITLE_SLUG> <BASE_BRANCH>`; set `BRANCH_NAME = feature/<JIRA_KEY>-<JIRA_TITLE_SLUG>`.
      - Set `WORKTREE_PATH = REPO_ROOT`.
-
-  4. Register this session in `registry.json` by appending an entry with:
-     - `jira_key`: `JIRA_KEY`
-     - `branch`: `BRANCH_NAME`
-     - `worktree_path`: `WORKTREE_PATH`
-     - `status`: `"active"`
-     - `started_at`: current ISO 8601 UTC timestamp
+     - Register this session in `<REPO_ROOT>/sessions/registry.json` (creating the file as `[]` first if needed) by appending an entry with:
+       - `jira_key`: `JIRA_KEY`
+       - `branch`: `BRANCH_NAME`
+       - `worktree_path`: `WORKTREE_PATH`
+       - `base_branch`: `BASE_BRANCH`
+       - `status`: `"active"`
+       - `started_at`: current ISO 8601 UTC timestamp
 
   ## Output
 
