@@ -7,21 +7,49 @@ prompt: |
   The workflow state for a ticket lives on disk, not in conversation memory. This makes
   sessions resumable and lets partial runs skip work that is already done.
 
+  ## SESSION_ROOT
+
+  `SESSION_ROOT` is the single anchor for all cross-session artifacts — `generated-docs/`,
+  `sessions/registry.json`, and `state.yaml` all live under it:
+
+  - **Single-repo mode:** `SESSION_ROOT` = the repository root (`git rev-parse --show-toplevel`).
+  - **Workspace mode** (a `switchic.workspace.yaml` exists at or above cwd): `SESSION_ROOT` =
+    the directory containing `switchic.workspace.yaml`, NOT any individual repo.
+
+  It is never inside a worktree — artifacts must be visible from all sessions. Resolve it
+  once at the start of a workflow and pass it explicitly to every agent and skill that reads
+  or writes session artifacts.
+
+  ## TICKET_DIR
+
+  `TICKET_DIR` is where one ticket's artifacts (`state.yaml`, `implementation-plan.md`,
+  `review-summary.md`) live:
+
+  - **Single-repo mode:** `TICKET_DIR = <SESSION_ROOT>/generated-docs/<JIRA_KEY>`
+  - **Workspace mode:** `TICKET_DIR = <SESSION_ROOT>/generated-docs/<JIRA_KEY>/<REPO_NAME>`
+    where `REPO_NAME` is the basename of the target repo. A ticket that spans several repos
+    gets one `TICKET_DIR` — and one state file, plan, and review — per repo, so sessions for
+    the same ticket in different repos never overwrite each other.
+
+  Resolve `TICKET_DIR` together with `SESSION_ROOT` and pass it to every agent that reads or
+  writes ticket artifacts.
+
   ## Location
 
-  `generated-docs/<JIRA_KEY>/state.yaml` in the **primary workspace root** (never inside a
-  worktree — state must be visible from all sessions).
+  `<TICKET_DIR>/state.yaml`
 
   ## Schema
 
   ```yaml
   ticket: QC-12345
   phase: planned            # see lifecycle below
+  session_root: /abs/path/to/session/root
+  repo_root: /abs/path/to/target/repo        # equals session_root in single-repo mode
   base_branch: production
   branch_name: feature/QC-12345-fix-nil-message-send
-  worktree_path: /abs/path/to/session/root   # equals repo root for the primary session
+  worktree_path: /abs/path/of/this/session   # equals repo_root for the primary session
   plan:
-    path: generated-docs/QC-12345/implementation-plan.md
+    path: <TICKET_DIR>/implementation-plan.md
     status: draft           # draft | approved — mirrors the plan file's frontmatter
     revision: 1
   review:
@@ -52,7 +80,7 @@ prompt: |
      same turn the event happens, not at the end of the workflow.
   3. On any request for a ticket, read `state.yaml` FIRST. If present, trust it over
      conversation memory and resume from the recorded phase.
-  4. If `state.yaml` is missing but artifacts exist, reconstruct conservatively:
+  4. If `state.yaml` is missing but artifacts exist in `TICKET_DIR`, reconstruct conservatively:
      - `implementation-plan.md` with frontmatter `status: approved` → phase `approved`
      - `implementation-plan.md` with `status: draft` (or no frontmatter) → phase `planned`
      - `review-summary.md` with `verdict: approved` → phase `reviewed`

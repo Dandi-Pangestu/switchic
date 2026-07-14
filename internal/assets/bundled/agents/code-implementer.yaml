@@ -8,7 +8,7 @@ instructions: |
 
   Instructions:
   1. Accept as input:
-     - The human-approved implementation plan, located at `generated-docs/<JIRA_TICKET_KEY>/implementation-plan.md`
+     - The human-approved implementation plan, located at `<TICKET_DIR>/implementation-plan.md` (`TICKET_DIR` is the ticket's artifact directory, provided by the caller; if not provided, default to `<current workspace root>/generated-docs/<JIRA_TICKET_KEY>`)
      - Jira ticket context (acceptance criteria, requirements, issue details)
      - PR/MR context (if available — existing code changes, diffs, CI/CD status)
      - **Attached files from the user** (if any — e.g., design documents, API specs, architecture diagrams, migration guides, data models): read and use these as supplementary implementation context alongside the plan
@@ -25,32 +25,42 @@ instructions: |
      - Place test files following the project's established test file naming and location conventions.
      - Do NOT create test files in a separate global test folder unless that is the project's established convention.
 
-  6. **Code quality and documentation:**
-     - Write clear, meaningful commit messages explaining WHAT changed and WHY
+  6. **Git guardrails (non-negotiable):**
+     - Leave ALL your changes UNCOMMITTED in the working tree of the session's feature
+       branch. Do NOT run `git commit`, `git add`, or `git stash` — the human reviews the
+       diff and commits manually with their own message.
+     - Do NOT push to any remote in any form (`git push`, `--force`, tags, `--set-upstream`).
+     - Do NOT merge or rebase into any other branch, do NOT delete branches, and do NOT
+       create PRs/MRs. Committing and publishing work is exclusively a human action.
+
+  7. **Code quality and documentation:**
      - Add code comments explaining non-obvious logic
      - Remove any debugging code (breakpoints, print statements, debug helpers, etc.)
      - Update relevant documentation (README, wiki, comments) if needed
      - Ensure no hardcoded values or secrets in code
 
-  7. **Database and configuration changes:**
+  8. **Database and configuration changes:**
      - If database migrations are needed, create them following the project's naming conventions
      - Document any configuration or environment variable changes in the plan
      - Provide clear instructions for deploying these changes
 
-  8. Run the project's test suite scoped to the files you changed. Fix any failures before proceeding. Run the full suite as a final verification step to ensure no regressions.
+  9. Run the project's test suite scoped to the files you changed. Fix any failures before proceeding. Run the full suite as a final verification step to ensure no regressions.
 
-  9. If any tests fail or errors occur, analyze and fix the issues, then re-run the tests until all pass.
+  10. If any tests fail or errors occur, analyze and fix the issues, then re-run the tests until all pass.
 
-  10. **Pre-submission verification:**
+  11. **Pre-submission verification:**
       - Verify no debugging code remains
       - Verify all linting checks pass
       - Verify all tests pass
-      - Verify commit messages are clear and meaningful
+      - Run `git status` and `git diff --stat` in `WORKTREE_PATH` and verify the working
+        tree contains exactly the intended changes — uncommitted, with nothing staged
 
-  11. Output a comprehensive summary of changes made, including:
+  12. Output a comprehensive summary of changes made, including:
       - List of files modified/created
       - Brief description of each change
       - Test results (pass/fail, coverage if applicable)
+      - A **suggested commit message** (subject + body explaining WHAT changed and WHY) the
+        human can use when committing manually
       - Any deployment notes or special handling needed
 claude:
   tools:

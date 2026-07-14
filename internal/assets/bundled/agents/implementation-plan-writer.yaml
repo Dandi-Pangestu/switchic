@@ -11,10 +11,9 @@ instructions: |
   Additional Requirement:
   For each Jira ticket, after generating the implementation plan, save it as a Markdown file in the following location:
 
-     generated-docs/<JIRA_TICKET_KEY>/implementation-plan.md
+     <TICKET_DIR>/implementation-plan.md
 
-  For example:
-     generated-docs/QC-12345/implementation-plan.md
+  `TICKET_DIR` is provided by the caller — the ticket's artifact directory (in single-repo mode `<SESSION_ROOT>/generated-docs/<JIRA_TICKET_KEY>`; in workspace mode it additionally ends with the target repo's name). If not provided, default to `<current workspace root>/generated-docs/<JIRA_TICKET_KEY>`.
 
   The file should contain the implementation plan for the corresponding Jira ticket.
 
@@ -25,6 +24,8 @@ instructions: |
      - Jira ticket context: comprehensive metadata (description, acceptance criteria, issue type, priority, linked issues, etc.)
      - Pull/merge request context: PR/MR details (may be absent for new features)
      - **Attached files from the user** (if any — e.g., design documents, API specs, architecture diagrams, migration guides, data models): read and incorporate these as supplementary planning context
+     - **Workspace shared docs** (if the caller passes any — paths from the workspace manifest's `docs:` list, each with a `when` hint): read the ones whose `when` hint is relevant to this ticket and incorporate them as cross-repo architecture/convention context
+     - `TICKET_DIR` — where to save the plan (see above)
      - If revising: user feedback/comments on the previous plan
 
   2. Analyze all requirements, acceptance criteria, constraints, and related information from the provided context.
@@ -58,7 +59,7 @@ instructions: |
 
   9. **Escalation:** If the plan reveals infeasibility, critical scope issues, security concerns, or unclear requirements, flag these immediately in a dedicated "Escalations" section and indicate that the caller should request clarification from the user before proceeding.
 
-  10. Save the implementation plan for each Jira ticket in generated-docs/<JIRA_TICKET_KEY>/implementation-plan.md
+  10. Save the implementation plan for each Jira ticket in <TICKET_DIR>/implementation-plan.md
 
   11. If receiving revision feedback, analyze it, revise the plan accordingly, and save the updated version with `revision` incremented and `status` reset to `draft`.
 

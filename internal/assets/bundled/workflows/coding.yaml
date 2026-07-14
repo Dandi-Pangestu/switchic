@@ -9,16 +9,26 @@ description: |
   - Context gathering — jira-requirements-fetcher and pr-details-fetcher run in parallel.
   - Session bootstrap — session-bootstraper provisions a git worktree/feature branch and
     registers the session in sessions/registry.json.
-  - Planning — implementation-plan-writer produces generated-docs/<JIRA_KEY>/implementation-plan.md
+  - Planning — implementation-plan-writer produces <TICKET_DIR>/implementation-plan.md
     (frontmatter status: draft); a human approves before any code is written.
   - Implementation loop — code-implementer executes the approved plan; code-reviewer gates on
-    a machine-readable verdict in generated-docs/<JIRA_KEY>/review-summary.md; the loop
-    repeats until approved.
-  - Session lifecycle — session-manager lists and cleans up parallel worktrees.
-  Progress is tracked on disk in generated-docs/<JIRA_KEY>/state.yaml (session-state skill),
-  so interrupted sessions resume from the recorded phase instead of restarting. Missing
-  prerequisites are resolved dynamically: from disk first, then by delegating to the producing
-  agent, and only then by asking the user.
+    a machine-readable verdict in <TICKET_DIR>/review-summary.md; the loop repeats until
+    approved.
+  - Session lifecycle — session-manager lists and cleans up parallel worktrees. Cleanup is
+    strictly local: worktree directory + registry entry only, never a merge or push.
+  Git guardrail: no agent in this workflow ever commits, pushes to a remote, merges
+  branches, or opens PRs/MRs — implementation changes are left uncommitted on a local
+  feature branch so the human can review the diff, then commit and push manually.
+  Progress is tracked on disk in <TICKET_DIR>/state.yaml (session-state skill), so
+  interrupted sessions resume from the recorded phase instead of restarting. Missing
+  prerequisites are resolved dynamically: from disk first, then by delegating to the
+  producing agent, and only then by asking the user.
+  Works in single-repo and workspace (multi-repo) mode: SESSION_ROOT is the repo root in
+  single-repo mode and the workspace root (directory containing switchic.workspace.yaml) in
+  workspace mode, where the orchestrator asks which repo a ticket targets and passes the
+  workspace's shared docs to the planner. TICKET_DIR is SESSION_ROOT/generated-docs/<JIRA_KEY>,
+  namespaced by repo name in workspace mode so same-ticket sessions in different repos never
+  overwrite each other's artifacts.
 agents:
   - coding-orchestrator
   - jira-requirements-fetcher

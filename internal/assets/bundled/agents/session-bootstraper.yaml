@@ -11,27 +11,30 @@ instructions: |
   Accept as input:
   - `JIRA_KEY` — the Jira ticket key (e.g. `QC-12345`)
   - `JIRA_TITLE_SLUG` — lowercase, hyphens only, max 6 words (e.g. `fix-nil-message-send-crash`)
-  - `REPO_ROOT` — absolute path to the repository root (from `git rev-parse --show-toplevel`)
+  - `REPO_ROOT` — absolute path to the target repository root
   - `BASE_BRANCH` _(optional)_ — the branch to base the feature branch on. If not provided, prompt the user interactively: ask "Which base branch should the feature branch be created from? (default: `production`)" and use the answer, falling back to `production` if left blank.
+  - `SESSION_ROOT` _(optional)_ — where session artifacts (`sessions/registry.json`) live. Defaults to `REPO_ROOT`. In workspace mode, the caller passes the workspace root.
 
   ## Steps
 
-  1. Read `<REPO_ROOT>/sessions/registry.json`. If the file is empty or does not exist, treat it as `[]`.
+  1. Resolve `SESSION_ROOT` (default: `REPO_ROOT`). Read `<SESSION_ROOT>/sessions/registry.json`. If the file is empty or does not exist, treat it as `[]`.
 
-  2. **If** any entry has `status: "active"` → this is a **PARALLEL session**:
-     - Invoke the `worktree-setup` skill with `JIRA_KEY`, `JIRA_TITLE_SLUG`, `REPO_ROOT`, and `BASE_BRANCH`.
+  2. **If** any entry has `status: "active"` **for the same repo** (`repo_root == REPO_ROOT`, or an entry without `repo_root` when `SESSION_ROOT == REPO_ROOT`) → this is a **PARALLEL session**:
+     - Invoke the `worktree-setup` skill with `JIRA_KEY`, `JIRA_TITLE_SLUG`, `REPO_ROOT`, `BASE_BRANCH`, and `SESSION_ROOT`.
      - Capture `WORKTREE_PATH`, `BRANCH_NAME`, and `BASE_BRANCH` from the skill output.
      - The skill registers the session in the registry itself — do NOT append a second entry.
 
-  3. **If** registry is empty or no entry has `status: "active"` → this is the **PRIMARY session**:
+  3. **Otherwise** → this is the **PRIMARY session** for this repo:
+     - All git commands below run in `REPO_ROOT` (`git -C <REPO_ROOT> ...`).
      - Run `git rev-parse --abbrev-ref HEAD` to get the current branch name.
      - If the current branch already contains `JIRA_KEY` (e.g. `feature/QC-12345-...`): use it as-is; set `BRANCH_NAME = <current branch>`.
      - Otherwise: run `git pull origin <BASE_BRANCH>`, then `git checkout -b feature/<JIRA_KEY>-<JIRA_TITLE_SLUG> <BASE_BRANCH>`; set `BRANCH_NAME = feature/<JIRA_KEY>-<JIRA_TITLE_SLUG>`.
      - Set `WORKTREE_PATH = REPO_ROOT`.
-     - Register this session in `<REPO_ROOT>/sessions/registry.json` (creating the file as `[]` first if needed) by appending an entry with:
+     - Register this session in `<SESSION_ROOT>/sessions/registry.json` (creating the file as `[]` first if needed) by appending an entry with:
        - `jira_key`: `JIRA_KEY`
        - `branch`: `BRANCH_NAME`
        - `worktree_path`: `WORKTREE_PATH`
+       - `repo_root`: `REPO_ROOT`
        - `base_branch`: `BASE_BRANCH`
        - `status`: `"active"`
        - `started_at`: current ISO 8601 UTC timestamp
@@ -44,6 +47,7 @@ instructions: |
   - `BASE_BRANCH` — the resolved base branch that was used (for reference by downstream agents)
 
   Do NOT write or modify any source code files. Only manage git worktrees, branches, and the session registry.
+  Do NOT push anything to any remote. Reading from the remote (`git fetch`, `git pull` on the base branch) is allowed; writing to it is not — no `git push` in any form.
 claude:
   tools:
     - Bash

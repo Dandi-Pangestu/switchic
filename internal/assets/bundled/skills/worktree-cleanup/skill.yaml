@@ -9,7 +9,9 @@ prompt: |
 
   You will receive the following from the invoking agent:
   - `JIRA_KEY` — the Jira ticket key of the session to remove (e.g. `QC-99999`)
-  - `REPO_ROOT` — absolute path to the primary repository root (e.g. `/Users/you/hub_core`)
+  - `REPO_ROOT` — absolute path to the primary repository root (e.g. `/Users/you/my-repo`)
+  - `SESSION_ROOT` _(optional)_ — where session artifacts live; defaults to `REPO_ROOT`. In workspace mode, pass the workspace root (the directory containing `switchic.workspace.yaml`)
+  - `FORCE` _(optional)_ — pass the literal string `force` ONLY after the user has explicitly confirmed discarding uncommitted changes in the worktree. Never pass it on the first attempt.
 
   ## Steps
 
@@ -20,9 +22,9 @@ prompt: |
      chmod +x <SKILL_DIR>/scripts/worktree-cleanup.sh
      ```
 
-  3. Execute the script with the two inputs as positional arguments:
+  3. Execute the script with the inputs as positional arguments:
      ```
-     bash <SKILL_DIR>/scripts/worktree-cleanup.sh <JIRA_KEY> <REPO_ROOT>
+     bash <SKILL_DIR>/scripts/worktree-cleanup.sh <JIRA_KEY> <REPO_ROOT> <SESSION_ROOT> [force]
      ```
 
   4. Confirm the result to the user.
@@ -33,8 +35,11 @@ prompt: |
 
   ## Notes
 
-  - The session registry lives at `<REPO_ROOT>/sessions/registry.json`.
-  - If the session's `worktree_path` equals `REPO_ROOT` (primary session), the script only deregisters the session — it never removes the repository root.
+  - **Cleanup is strictly local housekeeping:** the script removes only the worktree directory and the registry entry. It never merges, never pushes, and never deletes branches — the feature branch and all its commits remain in the local repository for the human to publish when ready.
+  - If the worktree has uncommitted changes, the script refuses and exits non-zero. Relay the error to the user; only re-run with `force` after they explicitly confirm the changes should be discarded.
+  - The session registry lives at `<SESSION_ROOT>/sessions/registry.json`.
+  - The script removes the worktree via the repo recorded in the registry entry's `repo_root` field, falling back to the `REPO_ROOT` argument for older entries.
+  - If the session's `worktree_path` equals the repo root (primary session), the script only deregisters the session — it never removes the repository root.
 
   ## Error Handling
 
