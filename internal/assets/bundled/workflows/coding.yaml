@@ -1,11 +1,43 @@
 name: coding
 description: |
-  Drives a ticket from Jira to merged code in four phases:
-  1. Context gathering — fetches Jira requirements and PR details in parallel, then bootstraps a git worktree and feature branch.
-  2. Planning — a senior-architect agent produces an implementation plan saved to generated-docs/<JIRA_KEY>/implementation-plan.md; a human approves before any code is written.
-  3. Implementation loop — code-implementer executes the plan (code + tests), code-reviewer checks correctness, quality, security, and acceptance criteria; the loop repeats until the review passes.
-  4. Session lifecycle — session-manager tracks parallel worktrees via sessions/registry.json and cleans up on completion.
-  The coding-orchestrator drives all sub-agents; ordering and retry logic are defined in its instructions.
+  Drives software engineering work from Jira ticket to reviewed code, coordinated
+  hierarchically by the coding-orchestrator. The orchestrator routes each request to a goal
+  (requirements-only, plan-only, implement-only, review-only, full-cycle, or session-ops) and
+  runs only the capabilities that goal needs — so it can fetch requirements alone, or drive
+  the full cycle end-to-end.
+  Capabilities:
+  - Context gathering — jira-requirements-fetcher and pr-details-fetcher run in parallel
+    and persist their output to generated-docs/<JIRA_KEY>/{jira-context.md,pr-context.md},
+    so downstream agents and resumed sessions read from disk instead of re-fetching.
+  - Session bootstrap — session-bootstraper provisions a git worktree/feature branch and
+    registers the session in sessions/registry.json.
+  - Planning — implementation-plan-writer produces <TICKET_DIR>/implementation-plan.md
+    (frontmatter status: draft); a human approves before any code is written.
+  - Implementation loop — code-implementer executes the approved plan; code-reviewer gates on
+    a machine-readable verdict in <TICKET_DIR>/review-summary.md; the loop repeats until
+    approved.
+  - Session lifecycle — session-manager lists and cleans up parallel worktrees. Cleanup is
+    strictly local: worktree directory + registry entry only, never a merge or push.
+  Git guardrail: no agent in this workflow ever commits, pushes to a remote, merges
+  branches, or opens PRs/MRs — implementation changes are left uncommitted on a local
+  feature branch so the human can review the diff, then commit and push manually.
+  Cost-aware by design: mechanical agents (fetchers, session bootstrap/manager) run on a
+  small fast model with capped turns while judgment-heavy agents get stronger models;
+  artifacts pass between agents by path, never by content; re-reviews are scoped to the
+  previously flagged findings plus the new diff. For a single trivial capability you can
+  also skip the orchestrator layer entirely and invoke the sub-agent directly (e.g.
+  "@jira-requirements-fetcher QC-123") — the orchestrator earns its cost when
+  coordination, state, or gates are involved.
+  Progress is tracked on disk in <TICKET_DIR>/state.yaml (session-state skill), so
+  interrupted sessions resume from the recorded phase instead of restarting. Missing
+  prerequisites are resolved dynamically: from disk first, then by delegating to the
+  producing agent, and only then by asking the user.
+  Works in single-repo and workspace (multi-repo) mode: SESSION_ROOT is the repo root in
+  single-repo mode and the workspace root (directory containing switchic.workspace.yaml) in
+  workspace mode, where the orchestrator asks which repo a ticket targets and passes the
+  workspace's shared docs to the planner. TICKET_DIR is SESSION_ROOT/generated-docs/<JIRA_KEY>,
+  namespaced by repo name in workspace mode so same-ticket sessions in different repos never
+  overwrite each other's artifacts.
 agents:
   - coding-orchestrator
   - jira-requirements-fetcher
@@ -18,5 +50,6 @@ agents:
 skills:
   - code-review-documentation
   - implementation-plan
+  - session-state
   - worktree-cleanup
   - worktree-setup

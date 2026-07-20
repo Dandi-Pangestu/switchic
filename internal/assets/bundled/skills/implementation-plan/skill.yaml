@@ -2,28 +2,71 @@ name: implementation-plan
 description: |
   Guide for producing structured implementation plans for Jira tickets, PRs, and similar
   requirements; use when synthesizing requirements, constraints, and acceptance criteria into
-  a clear, actionable, and well-organized plan.
+  a clear, actionable, and well-organized plan with a machine-checkable approval status.
 prompt: |
   To produce a high-quality implementation plan:
 
-  1. Use clear headings and sections (e.g., High-Level Architecture, Key Tasks, Risks & Assumptions, Rollout).
-  2. Include high-level architecture/design decisions.
-  3. List key tasks and subtasks, sequenced by phases and dependencies.
-  4. Address test adjustments or additions (e.g., RSpec, unit/integration tests).
-  5. Highlight risks, assumptions, and open questions.
-  6. Cover rollout/deployment considerations.
-  7. Format for easy consumption by engineers and stakeholders.
+  ## Document contract (required)
+
+  Every plan file MUST begin with YAML frontmatter so that orchestrating agents can check the
+  plan's state without interpreting prose:
+
+  ```
+  ---
+  ticket: <JIRA_KEY>
+  status: draft            # draft | approved
+  revision: 1              # increment on every revision
+  updated_at: <ISO 8601 UTC timestamp>
+  ---
+  ```
+
+  Rules:
+  - New plans and every revision are saved with `status: draft`. Only the orchestrating agent
+    flips `status` to `approved`, and only after explicit human approval.
+  - Increment `revision` each time the plan is rewritten from feedback.
+  - Orchestrators MUST treat a plan without frontmatter, or with `status: draft`, as unapproved.
+
+  ## Structure
+
+  1. Use clear headings and sections (e.g., High-Level Architecture, Acceptance Criteria Mapping, Key Tasks, Verification, Risks & Assumptions, Rollout).
+  2. Include high-level architecture/design decisions with rationale.
+  3. **Acceptance Criteria Mapping** — list every acceptance criterion from the ticket and map it to the task(s) that satisfy it. Every criterion must be covered by at least one task; every task should trace back to a criterion or a stated technical necessity.
+  4. List key tasks and subtasks, sequenced by phases and dependencies. Where known, name the files or modules each task touches.
+  5. **Verification** — state how the implementation will be verified: which test suites or commands to run (using the project's own test framework and tooling), and any manual checks.
+  6. Address test adjustments or additions using the project's established test framework and conventions — do not assume a specific stack.
+  7. Highlight risks, assumptions, and open questions.
+  8. Cover rollout/deployment considerations (migrations, config/env changes, feature flags).
+  9. Format for easy consumption by engineers and stakeholders.
 
   Example:
+
+  ```
+  ---
+  ticket: QC-12345
+  status: draft
+  revision: 1
+  updated_at: 2026-01-01T00:00:00Z
+  ---
 
   ## High-Level Architecture
   - Use event-driven microservices
   - Integrate with external API via webhook
 
+  ## Acceptance Criteria Mapping
+  | Criterion | Covered by |
+  |-----------|------------|
+  | AC1: Webhook events are persisted | Tasks 1, 2 |
+  | AC2: Failed deliveries are retried | Task 3 |
+
   ## Key Tasks
-  1. Update domain model
-  2. Implement webhook handler
-  3. Add unit and integration tests
+  1. Update domain model (`app/models/...`)
+  2. Implement webhook handler (`app/controllers/...`)
+  3. Add retry queue with backoff
+  4. Add unit and integration tests per project conventions
+
+  ## Verification
+  - Run the project's test suite scoped to changed files, then the full suite
+  - Manually replay a sample webhook against staging
 
   ## Risks & Assumptions
   - External API reliability
@@ -31,5 +74,6 @@ prompt: |
 
   ## Rollout
   - Deploy to staging, verify integration, then production
+  ```
 
   Agents should invoke this skill when tasked with producing implementation plans for Jira tickets, PRs, or similar requirements. Output must be structured, actionable, and ready for review or execution.

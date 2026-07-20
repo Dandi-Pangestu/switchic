@@ -1,7 +1,8 @@
 name: worktree-setup
 description: |
   Provisions a new git worktree at a sibling path of the repository root for a parallel agent
-  session; use when starting an isolated parallel agent session branched off latest production.
+  session; use when starting an isolated parallel agent session branched off the latest base
+  branch (default: production).
 prompt: |
   To provision a parallel agent session worktree:
 
@@ -10,36 +11,47 @@ prompt: |
   You will receive the following from the invoking agent:
   - `JIRA_KEY` — the Jira ticket key (e.g. `QC-99999`)
   - `JIRA_TITLE_SLUG` — the Jira title slug: lowercase, hyphens only, max 6 words (e.g. `fix-nil-error-message-send`)
-  - `REPO_ROOT` — absolute path to the repository root (e.g. `/Users/you/hub_core`)
+  - `REPO_ROOT` — absolute path to the target repository root (e.g. `/Users/you/my-repo`)
+  - `BASE_BRANCH` _(optional)_ — the branch to base the feature branch on; defaults to `production` if omitted
+  - `SESSION_ROOT` _(optional)_ — where session artifacts live; defaults to `REPO_ROOT`. In workspace mode, pass the workspace root (the directory containing `switchic.workspace.yaml`) so all sessions share one registry
 
   ## Steps
 
-  1. Locate the script at `<SKILL_DIR>/scripts/worktree-setup.sh` where `<SKILL_DIR>` is the directory containing this SKILL.md file.
+  1. Locate the script at `<SKILL_DIR>/scripts/worktree-setup.sh` where `<SKILL_DIR>` is the directory containing this skill definition.
 
   2. Ensure the script is executable:
      ```
      chmod +x <SKILL_DIR>/scripts/worktree-setup.sh
      ```
 
-  3. Execute the script with the three inputs as positional arguments:
+  3. Execute the script with the inputs as positional arguments:
      ```
-     bash <SKILL_DIR>/scripts/worktree-setup.sh <JIRA_KEY> <JIRA_TITLE_SLUG> <REPO_ROOT>
+     bash <SKILL_DIR>/scripts/worktree-setup.sh <JIRA_KEY> <JIRA_TITLE_SLUG> <REPO_ROOT> <BASE_BRANCH> <SESSION_ROOT>
      ```
 
-  4. The script will output two lines to stdout:
+  4. The script will output three lines to stdout:
      ```
      WORKTREE_PATH=<absolute-path>
      BRANCH_NAME=<branch-name>
+     BASE_BRANCH=<base-branch-used>
      ```
      Parse these lines to extract the values and store them as session variables.
 
-  5. Pass `WORKTREE_PATH` and `BRANCH_NAME` to all downstream agents.
+  5. Pass `WORKTREE_PATH`, `BRANCH_NAME`, and `BASE_BRANCH` to all downstream agents.
 
   ## Output
 
   Return to the invoking agent:
-  - `WORKTREE_PATH` — absolute path of the provisioned worktree
+  - `WORKTREE_PATH` — absolute path of the provisioned worktree (sibling of `REPO_ROOT`, named `<repo-name>-session-<JIRA_KEY>`)
   - `BRANCH_NAME` — name of the newly created branch (e.g. `feature/QC-99999-fix-nil-message-send`)
+  - `BASE_BRANCH` — the base branch the feature branch was created from
+
+  ## Notes
+
+  - The session registry lives at `<SESSION_ROOT>/sessions/registry.json`. The script creates it (as `[]`) if it does not exist and appends the new session entry (including `repo_root`, so cleanup knows which repo owns the worktree).
+  - The script resolves symlinked repo paths to their physical location, so workspace repos symlinked under `repos/` get their worktree next to the real repository.
+  - The script never modifies the primary checkout: it fetches `origin/<BASE_BRANCH>` and creates the worktree directly from it.
+  - Git only checks out tracked files into a new worktree, so the script copies gitignored local config from the primary checkout into the worktree: root-level `.env` and `.env.*` files, `config/master.key`, and `config/credentials/*.key`. This lets test suites that read local env files (e.g. rspec with `.env.test`) run in the worktree immediately. Tracked files are never overwritten. If the project keeps other untracked local config the tests need, copy it into the worktree manually after setup.
 
   ## Error Handling
 
@@ -47,5 +59,5 @@ prompt: |
 
   Common causes of failure:
   - `jq` is not installed — fix: `brew install jq`
-  - `production` branch has local conflicts — user must resolve manually
+  - `BASE_BRANCH` does not exist on `origin` — verify the branch name with the user
   - Worktree path already exists — user may need to run `@session-manager cleanup <KEY>` first
