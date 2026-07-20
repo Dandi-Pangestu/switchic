@@ -310,6 +310,15 @@ switchic workspace add ../billing-api --context-file ../billing-api/docs/CLAUDE.
 switchic workspace remove billing-contracts
 ```
 
+**Browsing out-of-tree repos** — repos registered with an absolute path (living outside the workspace directory) get a symlink under `repos/<name>`, so `ls repos/` surfaces every repo in one place regardless of where it actually lives on disk. Repos registered with a relative path (the sibling-directory pattern above) are already reachable in-tree and don't get one. Symlinks are created/removed automatically by `workspace add`/`remove`; run `switchic workspace link` to resync them by hand (e.g. after editing the manifest directly or cloning the workspace onto a new machine):
+
+```bash
+switchic workspace add /Users/me/code/billing-legacy --role backend
+ls repos/   # billing-legacy -> /Users/me/code/billing-legacy
+
+switchic workspace link
+```
+
 ---
 
 ## Commands
@@ -331,6 +340,7 @@ switchic workspace remove billing-contracts
 | `workspace add <path>` | Register a repo; accepts `--role`, `--notes`, `--context-file` |
 | `workspace remove <name>` | Unregister a repo from the workspace |
 | `workspace list` | List registered repos and warn about any missing on disk |
+| `workspace link` | Create/refresh `repos/<name>` symlinks for out-of-tree repos |
 | `version` | Print the binary version |
 
 ---
@@ -544,6 +554,14 @@ skills:
 rules:
   active:
     - golang
+
+# Optional: reference docs shared across the whole workspace. Paths are
+# relative to the workspace root. The "when" field scopes the @-mention to a
+# specific trigger so the AI only loads the doc when it is relevant.
+docs:
+  - path: docs/architecture.md
+    when: understanding how the repos fit together
+  - path: README.md
 
 repos:
   - name: billing-api

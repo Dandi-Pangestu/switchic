@@ -43,6 +43,13 @@ var workspaceAddCmd = &cobra.Command{
 		if miss := workspace.MissingRepos(root, m); len(miss) > 0 {
 			output.Info(cmd.OutOrStdout(), "Warning: %d repo path(s) do not exist on disk yet.", len(miss))
 		}
+
+		newRepo := m.Repos[len(m.Repos)-1]
+		if err := workspace.LinkRepo(root, newRepo); err != nil {
+			output.Info(cmd.OutOrStdout(), "Warning: could not create repos/ symlink: %v", err)
+		} else if err := workspace.EnsureGitignoreEntry(root); err != nil {
+			output.Info(cmd.OutOrStdout(), "Warning: could not update .gitignore: %v", err)
+		}
 		return nil
 	},
 }

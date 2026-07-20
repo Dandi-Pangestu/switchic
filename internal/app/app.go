@@ -58,6 +58,9 @@ func Resolve(root string, proj config.Project, ws workspace.Manifest, isWorkspac
 		if ws.Platform != "" {
 			active.Platform = ws.Platform
 		}
+		if len(ws.Docs) > 0 {
+			active.Docs = ws.Docs
+		}
 	}
 	if active.Platform == "" {
 		active.Platform = "claude"
@@ -149,7 +152,7 @@ func Resolve(root string, proj config.Project, ws workspace.Manifest, isWorkspac
 		Skills:    skill.ResolveActive(allSkills, mergedSkills),
 		Rules:     rules.ResolveActive(allRules, active.Rules.Active),
 		Root:      root,
-		Project:   proj,
+		Project:   active,
 		Workspace: ws,
 		IsWS:      isWorkspace,
 	}, nil

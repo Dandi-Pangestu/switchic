@@ -36,3 +36,11 @@ skills:
 rules:
   active:
     - global
+
+# Reference docs shared across the whole workspace. Paths are relative to
+# this workspace file. The "when" field scopes the @-mention to a specific
+# trigger so the AI only loads the doc when it is relevant.
+docs:
+  - path: docs/architecture.md
+    when: understanding how the repos fit together
+  - path: README.md
