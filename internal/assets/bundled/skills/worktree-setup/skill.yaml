@@ -51,6 +51,7 @@ prompt: |
   - The session registry lives at `<SESSION_ROOT>/sessions/registry.json`. The script creates it (as `[]`) if it does not exist and appends the new session entry (including `repo_root`, so cleanup knows which repo owns the worktree).
   - The script resolves symlinked repo paths to their physical location, so workspace repos symlinked under `repos/` get their worktree next to the real repository.
   - The script never modifies the primary checkout: it fetches `origin/<BASE_BRANCH>` and creates the worktree directly from it.
+  - Git only checks out tracked files into a new worktree, so the script copies gitignored local config from the primary checkout into the worktree: root-level `.env` and `.env.*` files, `config/master.key`, and `config/credentials/*.key`. This lets test suites that read local env files (e.g. rspec with `.env.test`) run in the worktree immediately. Tracked files are never overwritten. If the project keeps other untracked local config the tests need, copy it into the worktree manually after setup.
 
   ## Error Handling
 

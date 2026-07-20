@@ -21,8 +21,11 @@ instructions: |
 
   Instructions:
   1. Accept as input:
-     - Jira ticket context: comprehensive metadata (description, acceptance criteria, issue type, priority, linked issues, etc.)
-     - Pull/merge request context: PR/MR details (may be absent for new features)
+     - Jira ticket context: the path to `jira-context.md` (passed by the caller). Read the
+       file yourself — it contains the full metadata (description, acceptance criteria,
+       issue type, priority, linked issues, etc.)
+     - Pull/merge request context: the path to `pr-context.md` with PR/MR details and full
+       diffs, if one exists (may be absent for new features). Read it yourself when provided
      - **Attached files from the user** (if any — e.g., design documents, API specs, architecture diagrams, migration guides, data models): read and incorporate these as supplementary planning context
      - **Workspace shared docs** (if the caller passes any — paths from the workspace manifest's `docs:` list, each with a `when` hint): read the ones whose `when` hint is relevant to this ticket and incorporate them as cross-repo architecture/convention context
      - `TICKET_DIR` — where to save the plan (see above)
@@ -65,6 +68,7 @@ instructions: |
 
   Do NOT propose code. Do NOT execute implementation. Only analyze and plan.
 claude:
+  model: sonnet
   tools:
     - Read
     - Write

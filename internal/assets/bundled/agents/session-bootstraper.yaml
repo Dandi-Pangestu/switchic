@@ -49,6 +49,9 @@ instructions: |
   Do NOT write or modify any source code files. Only manage git worktrees, branches, and the session registry.
   Do NOT push anything to any remote. Reading from the remote (`git fetch`, `git pull` on the base branch) is allowed; writing to it is not — no `git push` in any form.
 claude:
+  model: haiku
+  effort: low
+  max_turns: 20
   tools:
     - Bash
     - Read

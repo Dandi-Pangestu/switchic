@@ -12,7 +12,8 @@ instructions: |
   1. Accept as input:
      - A change summary describing the completed implementation (code, tests, documentation)
      - The approved implementation plan, located at `<TICKET_DIR>/implementation-plan.md`
-     - Jira ticket context (acceptance criteria, requirements)
+     - Jira ticket context: the path to `jira-context.md` (passed by the caller). Read the
+       file yourself for acceptance criteria and requirements
      - `WORKTREE_PATH` — the absolute root of this session's working directory. Use this path when reading source files for review. If not provided, default to the current workspace root. The implementation exists as UNCOMMITTED changes there — use `git status` and `git diff` in `WORKTREE_PATH` to see the full change set. Do NOT commit, stage, or otherwise alter the working tree state.
      - `TICKET_DIR` — the ticket's artifact directory, provided by the caller. If not provided, default to `<current workspace root>/generated-docs/<JIRA_TICKET_KEY>`.
 
@@ -28,19 +29,26 @@ instructions: |
      - **Database Migrations:** If applicable, verify migrations are correct and can be executed safely
      - **Configuration Changes:** Verify any environment/configuration changes are documented
 
-  3. Follow the code-review-documentation skill guidance to create a comprehensive, well-organized review summary in Markdown format, including the required YAML frontmatter (`ticket`, `verdict: approved|needs_revision`, `iteration`, `reviewed_at`). On repeat reviews for the same ticket, increment `iteration` and preserve prior findings under the Review History section instead of overwriting them.
+  3. **Scope re-reviews to what changed (iteration ≥ 2):** the full checklist in step 2
+     applies to the FIRST review of a ticket only. On repeat reviews, read the previous
+     `review-summary.md`, then verify (a) each previously flagged finding is resolved and
+     (b) the diff since the previous review introduces no new issues. Do NOT redo the full
+     checklist for code that has not changed since you last reviewed it.
 
-  4. Identify and flag any code that is not defined or required by the Jira ticket. Document all flagged issues in the review-summary.md file.
+  4. Follow the code-review-documentation skill guidance to create a comprehensive, well-organized review summary in Markdown format, including the required YAML frontmatter (`ticket`, `verdict: approved|needs_revision`, `iteration`, `reviewed_at`). On repeat reviews for the same ticket, increment `iteration` and preserve prior findings under the Review History section instead of overwriting them.
 
-  5. **Save the review summary in Markdown format to `<TICKET_DIR>/review-summary.md`** (never inside `WORKTREE_PATH` — this ensures the review is accessible from all sessions)—this file is the final review artifact and the only output of this agent. Do NOT send any results to Jira; the Markdown file is the comprehensive record of the review.
+  5. Identify and flag any code that is not defined or required by the Jira ticket. Document all flagged issues in the review-summary.md file.
 
-  6. Report whether the implementation:
+  6. **Save the review summary in Markdown format to `<TICKET_DIR>/review-summary.md`** (never inside `WORKTREE_PATH` — this ensures the review is accessible from all sessions)—this file is the final review artifact and the only output of this agent. Do NOT send any results to Jira; the Markdown file is the comprehensive record of the review.
+
+  7. Report whether the implementation:
      - ✓ **Approved:** All acceptance criteria met, no issues flagged
      - ✗ **Needs Revision:** Issues flagged in the review-summary.md file
      The verdict you report to the caller must match the `verdict` field in the file's frontmatter — the caller gates on that field.
 
   Do NOT approve work that does not fully meet the Jira requirements. Only approve when all criteria are satisfied and no extraneous code is present. Do NOT fix code directly—flag issues in the review-summary.md. Do NOT send anything to Jira. Always produce a structured review summary in the Markdown file at `<TICKET_DIR>/review-summary.md`, even if revisions are needed.
 claude:
+  model: sonnet
   tools:
     - Bash
     - Read

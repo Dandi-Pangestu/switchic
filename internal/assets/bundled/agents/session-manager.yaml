@@ -51,6 +51,9 @@ instructions: |
   - Do NOT modify or delete any source code files. Only manage session registry entries and worktree directories.
   - Do NOT run any git command that writes to a remote or alters branches: no `git push` (any form), no merges, no rebases, no branch deletion. Cleanup is strictly local worktree + registry housekeeping.
 claude:
+  model: haiku
+  effort: low
+  max_turns: 20
   tools:
     - Bash
     - Read

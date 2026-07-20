@@ -30,6 +30,7 @@ switchic status                # see active components and token cost
   - [Multi-repo workspace](#multi-repo-workspace)
 - [Commands](#commands)
 - [Bundled Library](#bundled-library)
+- [Coding Workflow](#coding-workflow)
 - [User-Defined Assets](#user-defined-assets)
 - [Config Reference](#config-reference)
 - [Cost Optimization](#cost-optimization)
@@ -81,7 +82,7 @@ Rules support directories — enabling `backend` activates all rules inside that
 
 A **workflow** is a named preset that automatically activates a bundle of agents and skills suited to a task type. Instead of manually toggling individual components, you set a workflow and get a ready-to-run context.
 
-**Example use case:** the `coding` workflow activates the full agent pipeline for ticket-to-PR development: context fetcher, planner, implementer, reviewer, and session manager — all wired together.
+**Example use case:** the `coding` workflow activates a hierarchical agent pipeline for ticket-to-code development — a `coding-orchestrator` that routes each request to only the capabilities it needs (fetch requirements, write a plan, implement, review, or manage sessions), instead of always running a fixed sequence. See [Coding Workflow](#coding-workflow) for the full capability list and example prompts.
 
 ---
 
@@ -373,8 +374,9 @@ These agents, skills, rules, and workflows ship inside the binary. Use `switchic
 | `generate-context` | Scan the project and auto-fill description, stack, commands, structure, conventions, dos, donts, and docs into `.switchic/config.yaml` |
 | `agent-import` | Convert an agent definition from any AI coding platform into switchic format |
 | `skill-import` | Convert a skill definition from any AI coding platform into switchic format |
-| `worktree-setup` | Provision a git worktree at a sibling path of the repository root |
+| `worktree-setup` | Provision a git worktree at a sibling path of the repository root, copying gitignored local config (`.env*`, `config/master.key`, credentials keys) so tests run immediately |
 | `worktree-cleanup` | Remove a git worktree created by the `worktree-setup` skill |
+| `session-state` | Defines the per-ticket `state.yaml` schema and phase lifecycle the coding-orchestrator uses to resume interrupted sessions |
 | `commit-msg` | Generate a conventional commit message from staged changes |
 | `example` | Template skill demonstrating every available YAML field — use as a starting point for custom skills |
 
@@ -393,7 +395,108 @@ Rules are referenced by their key path (without `.yaml`). Enabling a directory k
 
 | Name | Description | Activates |
 |---|---|---|
-| `coding` | Drives a ticket from Jira to merged code in four phases: context gathering → planning → implementation loop → session cleanup | All coding agents + implementation-plan, code-review-documentation, worktree-setup, worktree-cleanup skills |
+| `coding` | Drives software engineering work from a Jira ticket to reviewed code via a hierarchical, goal-routed orchestrator — run the full cycle, or just one capability (requirements, plan, implement, review, session management). See [Coding Workflow](#coding-workflow) | All coding agents + implementation-plan, code-review-documentation, session-state, worktree-setup, worktree-cleanup skills |
+
+---
+
+## Coding Workflow
+
+The `coding` workflow's `coding-orchestrator` is a hierarchical coordinator, not a fixed
+script. It routes every request to only the capabilities that request needs, delegates to
+specialist sub-agents, validates each result against a contract before accepting it, and
+tracks progress on disk so a session can be resumed instead of restarted.
+
+`coding` is already active by default in `.switchic/config.yaml` (`workflows.active`) after
+`switchic init`. If you removed it, add `coding` back to that list, then regenerate:
+
+```bash
+switchic switch claude   # or kiro / github-copilot
+```
+
+Then just talk to `@coding-orchestrator` (or let your platform route to it automatically)
+— you don't need to know the internal agent names.
+
+### Goals
+
+Every request is classified into one of six goals. Only that goal's capabilities run.
+
+| Goal | What it does | Example prompt |
+|---|---|---|
+| `requirements-only` | Fetches Jira ticket context (and PR/MR context if mentioned) | `@coding-orchestrator fetch the requirements for QC-1234` |
+| `plan-only` | Fetches context if missing, then writes an implementation plan and stops at human approval | `@coding-orchestrator write an implementation plan for QC-1234` |
+| `implement-only` | Requires an approved plan; bootstraps a session if needed, then implements | `@coding-orchestrator the plan for QC-1234 is approved, implement it` |
+| `review-only` | Reviews the current implementation against the approved plan and ticket | `@coding-orchestrator review the implementation for QC-1234` |
+| `full-cycle` | Runs everything above in order, looping implement ⇄ review until approved | `@coding-orchestrator drive QC-1234 from ticket to reviewed code` |
+| `session-ops` | Lists, inspects, or cleans up sessions | `@coding-orchestrator list active sessions` · `@coding-orchestrator clean up QC-1234` |
+
+More example prompts:
+
+```
+@coding-orchestrator what does QC-1234 ask for?
+@coding-orchestrator revise the plan for QC-1234 — skip the migration, it's already done
+@coding-orchestrator just run code-implementer against the approved plan for QC-1234
+@coding-orchestrator review what was implemented for QC-1234
+@coding-orchestrator please complete task QC-1234
+@coding-orchestrator resume QC-1234
+@coding-orchestrator status for QC-1234
+@coding-orchestrator abandon QC-1234
+```
+
+Missing inputs are resolved dynamically, cheapest source first: **disk** (state file,
+saved context, the plan) → **delegate** to the agent that produces it → **ask you**, and
+only for things no agent can produce (the Jira key, PR/MR id, base branch, plan approval).
+
+### Human gates
+
+Two points always wait for you, regardless of goal:
+
+- **Plan approval** — the orchestrator never lets `code-implementer` run against a plan
+  still marked `draft`. Give feedback and it revises; approve and it proceeds.
+- **Escalations** — infeasibility, unclear requirements, or security concerns raised by
+  any sub-agent go straight to you instead of being silently worked around.
+
+### Single-repo and workspace mode
+
+In a single repo, session artifacts live at `<repo>/generated-docs/<JIRA_KEY>/`. In a
+[workspace](#multi-repo-workspace), they live at the workspace root instead, and the
+orchestrator asks which registered repo a ticket targets before touching code. A ticket
+spanning several repos runs as one orchestrator session per repo (each with its own
+plan and review, namespaced under the repo's name) — **workspace mode is single-repo-per-session
+by design**, so run them sequentially in one conversation or concurrently in separate tabs.
+
+### Parallel sessions and git guardrails
+
+Starting a new ticket while another is active spins up a git worktree + feature branch
+next to your repo (`<repo>-session-<JIRA_KEY>`) so sessions never collide, and registers it
+in `sessions/registry.json`. The worktree setup copies your gitignored local config
+(`.env`, `.env.test`, `config/master.key`, `config/credentials/*.key`) into the new
+worktree, since `git worktree add` only checks out tracked files — this is what makes
+`rspec` (or any test suite reading local env files) work immediately in a fresh worktree.
+
+No agent in this workflow ever commits, pushes, merges, or opens a PR/MR:
+
+- Implementation changes are left **uncommitted** in the working tree so you can review
+  the diff and commit/push manually with your own message (the implementer's summary
+  includes a suggested one).
+- Session cleanup (`@coding-orchestrator clean up QC-1234`) only removes the worktree
+  directory and the registry entry — never a merge or push — and refuses to run while
+  uncommitted changes exist, so nothing is silently discarded.
+
+### Cost awareness
+
+Multi-agent workflows spend tokens on every delegation, so the workflow is tuned to spend
+them where judgment is actually needed:
+
+- Mechanical agents (Jira/PR fetchers, session bootstrap, session manager) run on a small,
+  fast model with capped turns; planning and review run on a mid-tier model; the
+  orchestrator and implementer inherit your session's model since that's where quality is
+  worth paying for.
+- Fetched Jira/PR context and diffs are saved to disk once and passed between agents by
+  file path — never re-fetched or re-pasted into every delegation.
+- Re-reviews after revision only re-check the previously flagged findings and the new
+  diff, not the entire checklist again.
+- For a single, trivial capability, you can skip the orchestrator layer entirely and call
+  a sub-agent directly, e.g. `@jira-requirements-fetcher QC-1234`.
 
 ---
 

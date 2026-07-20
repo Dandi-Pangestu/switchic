@@ -55,6 +55,39 @@ git -C "$REPO_ROOT" worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" "origin/${BA
 
 ABSOLUTE_WORKTREE_PATH="$(cd "$WORKTREE_PATH" && pwd)"
 
+# Git only checks out TRACKED files into a new worktree, so gitignored local
+# config (.env files, Rails credential keys) exists only in the primary
+# checkout. Copy it over so test suites (e.g. rspec needing .env.test) run in
+# the worktree without manual setup. Tracked files are skipped — they are
+# already checked out and must not be overwritten with local modifications.
+COPIED_FILES=()
+copy_local_config() {
+  local rel="$1"
+  local src="${REPO_ROOT}/${rel}"
+  local dst="${ABSOLUTE_WORKTREE_PATH}/${rel}"
+  [[ -f "$src" ]] || return 0
+  if git -C "$REPO_ROOT" ls-files --error-unmatch "$rel" &>/dev/null; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$dst")"
+  cp "$src" "$dst"
+  COPIED_FILES+=("$rel")
+}
+
+for f in "$REPO_ROOT"/.env "$REPO_ROOT"/.env.*; do
+  [[ -f "$f" ]] || continue
+  copy_local_config "$(basename "$f")"
+done
+copy_local_config "config/master.key"
+for f in "$REPO_ROOT"/config/credentials/*.key; do
+  [[ -f "$f" ]] || continue
+  copy_local_config "config/credentials/$(basename "$f")"
+done
+
+if ((${#COPIED_FILES[@]})); then
+  echo "Copied local config into worktree: ${COPIED_FILES[*]}"
+fi
+
 echo "Registering session in registry.json..."
 NEW_ENTRY=$(jq -n \
   --arg jira_key "$JIRA_KEY" \

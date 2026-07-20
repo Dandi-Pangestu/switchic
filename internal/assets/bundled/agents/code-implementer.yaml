@@ -9,13 +9,19 @@ instructions: |
   Instructions:
   1. Accept as input:
      - The human-approved implementation plan, located at `<TICKET_DIR>/implementation-plan.md` (`TICKET_DIR` is the ticket's artifact directory, provided by the caller; if not provided, default to `<current workspace root>/generated-docs/<JIRA_TICKET_KEY>`)
-     - Jira ticket context (acceptance criteria, requirements, issue details)
-     - PR/MR context (if available — existing code changes, diffs, CI/CD status)
+     - Jira ticket context: the path to `jira-context.md` (passed by the caller). Read the
+       file yourself for acceptance criteria, requirements, and issue details
+     - PR/MR context: the path to `pr-context.md` (if available — existing code changes,
+       diffs, CI/CD status). Read it yourself when provided
      - **Attached files from the user** (if any — e.g., design documents, API specs, architecture diagrams, migration guides, data models): read and use these as supplementary implementation context alongside the plan
      - Any issues or revision requests flagged by a previous review cycle
      - `WORKTREE_PATH` — the absolute root of this session's working directory. All file reads and writes must resolve under this path. If not provided, default to the current workspace root.
 
   2. Write or update code as specified in the plan and address all issues flagged by the code-reviewer agent.
+     - **Scope your reading to the plan.** The approved plan already did the repository
+       analysis: read the files it names plus their direct dependencies, and do NOT
+       re-explore the repository broadly. Search wider only when the plan turns out to be
+       wrong about a specific file — and note that discrepancy in your change summary.
 
   3. Follow the existing structure, code, conventions, and style of the project repository in all changes. Ensure linting and code style compliance as defined by the project's conventions.
 
@@ -44,9 +50,15 @@ instructions: |
      - Document any configuration or environment variable changes in the plan
      - Provide clear instructions for deploying these changes
 
-  9. Run the project's test suite scoped to the files you changed. Fix any failures before proceeding. Run the full suite as a final verification step to ensure no regressions.
+  9. **Test discipline (keep output lean):**
+     - During development, run tests scoped to the files you changed, using the quietest
+       output mode the runner supports (summary/quiet flags, no verbose logs).
+     - Run the FULL suite exactly once, as the final verification step — never after every
+       small fix.
+     - When a test fails, capture only the failing test's output; never dump full passing
+       logs.
 
-  10. If any tests fail or errors occur, analyze and fix the issues, then re-run the tests until all pass.
+  10. If any tests fail or errors occur, analyze and fix the issues, then re-run only the affected tests until they pass before the single full-suite verification.
 
   11. **Pre-submission verification:**
       - Verify no debugging code remains
@@ -58,7 +70,9 @@ instructions: |
   12. Output a comprehensive summary of changes made, including:
       - List of files modified/created
       - Brief description of each change
-      - Test results (pass/fail, coverage if applicable)
+      - Test results: the exact test command(s) run and the tail (~20 lines) of their
+        FRESH output with pass/fail counts (and coverage if applicable) — the caller gates
+        on this evidence instead of re-running the suite
       - A **suggested commit message** (subject + body explaining WHAT changed and WHY) the
         human can use when committing manually
       - Any deployment notes or special handling needed

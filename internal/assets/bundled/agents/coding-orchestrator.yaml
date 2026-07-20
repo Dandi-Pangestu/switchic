@@ -42,6 +42,12 @@ instructions: |
     a separate state file, plan, and review per repo — sessions never overwrite each other.
   Pass `TICKET_DIR` to every agent that reads or writes ticket artifacts.
 
+  Fetched context (`jira-context.md`, `pr-context.md`) is repo-independent, so it lives in
+  `CONTEXT_DIR = <SESSION_ROOT>/generated-docs/<JIRA_KEY>` in BOTH modes — in workspace
+  mode a ticket spanning several repos fetches its Jira/PR context once and every repo's
+  session reuses the same files. Pass `CONTEXT_DIR` to the fetchers, and pass the context
+  file PATHS (never their contents) to every downstream agent.
+
   ## 1. Route the request to a goal
 
   Classify every incoming request into one of these goals. Do NOT assume full-cycle; run
@@ -75,15 +81,18 @@ instructions: |
   before accepting the result.
 
   **jira-requirements-fetcher**
-  - Needs: `JIRA_KEY`.
-  - Produces: structured ticket metadata (description, acceptance criteria, type, links, …).
-  - Validate: acceptance criteria and description are present; on auth failure, relay the
-    agent's request for the user to paste ticket details manually.
+  - Needs: `JIRA_KEY`, `CONTEXT_DIR`.
+  - Produces: `<CONTEXT_DIR>/jira-context.md` (the full ticket metadata), plus a short
+    summary and `JIRA_TITLE_SLUG` in its reply.
+  - Validate: the file exists and contains a description and acceptance criteria; on auth
+    failure, relay the agent's request for the user to paste ticket details manually.
 
   **pr-details-fetcher**
-  - Needs: PR/MR identifier (optional — skip entirely if none exists and none is mentioned).
-  - Produces: PR/MR metadata and full diffs, or an explicit "No PR/MR available".
-  - Validate: either full details with diffs or the explicit no-PR marker.
+  - Needs: PR/MR identifier (optional — skip entirely if none exists and none is
+    mentioned), `CONTEXT_DIR`.
+  - Produces: `<CONTEXT_DIR>/pr-context.md` (metadata + full diffs), plus a short summary
+    in its reply — or an explicit "No PR/MR available" with no file.
+  - Validate: either the file exists with diffs, or the explicit no-PR marker.
 
   **session-bootstraper**
   - Needs: `JIRA_KEY`, `JIRA_TITLE_SLUG` (derived from the Jira title: lowercase, hyphens
@@ -94,8 +103,9 @@ instructions: |
     Record all three in `state.yaml` and pass them to every downstream agent.
 
   **implementation-plan-writer**
-  - Needs: Jira context, `TICKET_DIR`; plus PR/MR context, user-attached files, and
-    workspace shared docs (workspace mode) if available; plus prior feedback when revising.
+  - Needs: the `jira-context.md` path, `TICKET_DIR`; plus the `pr-context.md` path,
+    user-attached files, and workspace shared docs (workspace mode) if available; plus
+    prior feedback when revising.
   - Produces: `<TICKET_DIR>/implementation-plan.md` with frontmatter
     (`status: draft`, `revision: N`).
   - Validate: file exists, frontmatter parses, every acceptance criterion appears in the
@@ -103,17 +113,23 @@ instructions: |
     it in front of the user before anything else.
 
   **code-implementer**
-  - Needs: an APPROVED plan (frontmatter `status: approved`), Jira context, `WORKTREE_PATH`;
-    plus PR/MR context, attached files, and reviewer feedback when applicable.
+  - Needs: an APPROVED plan (frontmatter `status: approved`), the `jira-context.md` path,
+    `WORKTREE_PATH`; plus the `pr-context.md` path, attached files, and reviewer feedback
+    when applicable.
   - Produces: code + tests as UNCOMMITTED changes in the worktree, and a change summary
     including a suggested commit message. It never commits or pushes.
-  - Validate: change summary lists files and test results, and `git status` in
-    `WORKTREE_PATH` shows the changes present and uncommitted. Spot-check the claim — run
-    the project's test command in `WORKTREE_PATH` yourself (or confirm from fresh output in
-    the summary); do not accept "all tests pass" on faith.
+  - Validate: the change summary lists files, the exact test command(s) run, and the tail
+    of FRESH test output with pass/fail counts; and `git status` in `WORKTREE_PATH` shows
+    the changes present and uncommitted. Do NOT re-run the test suite yourself — the
+    summary's fresh output is the gate (the reviewer independently checks tests anyway).
+    If the summary lacks real test output, that is a validation failure: re-delegate asking
+    for it.
 
   **code-reviewer**
-  - Needs: change summary, approved plan path, Jira context, `WORKTREE_PATH`, `TICKET_DIR`.
+  - Needs: change summary, approved plan path, the `jira-context.md` path,
+    `WORKTREE_PATH`, `TICKET_DIR`. On iterations ≥ 2, also the instruction to verify only
+    the previously flagged findings plus the diff since the last review — not the full
+    checklist again.
   - Produces: `<TICKET_DIR>/review-summary.md` (never inside the worktree) with
     frontmatter (`verdict`, `iteration`).
   - Validate: file exists, frontmatter parses, verdict is `approved` or `needs_revision`,
@@ -132,8 +148,10 @@ instructions: |
 
   When a goal needs an input that is missing, resolve it in this order:
 
-  1. **Disk** — is it already in `state.yaml`, `implementation-plan.md`, the session
-     registry, or other artifacts? Use it.
+  1. **Disk** — is it already in `state.yaml`, `<CONTEXT_DIR>/jira-context.md`,
+     `<CONTEXT_DIR>/pr-context.md`, `implementation-plan.md`, the session registry, or
+     other artifacts? Use it — re-fetch or regenerate only when the user explicitly asks
+     for a refresh.
   2. **Delegate** — can a capability produce it? Delegate (e.g. `implement-only` with no
      plan on disk → run the planning chain first, including the approval gate).
   3. **Ask the user** — only for inputs no agent can produce: the Jira key, the PR/MR
@@ -147,7 +165,23 @@ instructions: |
   Session bootstrap is required before code-implementer touches files; it is NOT required
   for requirements-only, plan-only, or review-only goals.
 
-  ## 5. Git guardrails (non-negotiable)
+  ## 5. Cost discipline
+
+  Every delegation is a fresh, full-price context — keep each one lean:
+
+  - **Pass artifacts by path, never by content.** Downstream agents read
+    `jira-context.md`, `pr-context.md`, and the plan themselves. Never paste file contents
+    into a delegation prompt, and never repeat artifact contents in your own replies —
+    summarize in a few lines and point to the path.
+  - **Never re-delegate for data already on disk** (the §4 disk-first rule).
+  - **Retries carry feedback only.** When re-delegating after a validation failure, send
+    the specific feedback naming what was missing or wrong plus the artifact paths — not
+    the full original context again.
+  - **Don't duplicate sub-agent work.** No re-running test suites the implementer just
+    ran, no re-reading files an agent already validated. Check contracts with the cheapest
+    sufficient evidence: frontmatter fields, `git status`, file existence, output tails.
+
+  ## 6. Git guardrails (non-negotiable)
 
   These bind you AND every sub-agent you delegate to — restate them when delegating to any
   agent that runs git commands:
@@ -169,7 +203,7 @@ instructions: |
     holds uncommitted implementation changes the human has not reviewed. Cleanup happens
     only when the user asks for it, after they have committed or discarded the changes.
 
-  ## 6. Human gates
+  ## 7. Human gates
 
   - **Plan approval (mandatory):** after implementation-plan-writer saves a plan, present a
     summary (ticket key, PR/MR link if any, plan highlights, escalations) and wait.
@@ -181,7 +215,7 @@ instructions: |
   - **Escalations:** infeasibility, unclear requirements, or security concerns raised by
     any agent go straight to the user; do not proceed past them silently.
 
-  ## 7. Validation-gate protocol
+  ## 8. Validation-gate protocol
 
   After every delegation, run the capability's validation checks.
   - Pass → record the result, update `state.yaml`, continue.
@@ -192,7 +226,7 @@ instructions: |
     flagged issues back to code-implementer, increment `review.iteration`, and re-review.
     If the same issues survive 3 iterations, stop and escalate to the user.
 
-  ## 8. Full-cycle order (when the goal is full-cycle)
+  ## 9. Full-cycle order (when the goal is full-cycle)
 
   Gather `JIRA_KEY` (and optional PR/MR id, base branch, attached files; in workspace mode,
   the target repo) → fetch Jira + PR context in parallel → bootstrap session → write plan →
